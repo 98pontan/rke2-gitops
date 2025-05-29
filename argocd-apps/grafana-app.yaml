@@ -7,8 +7,10 @@ spec:
   project: default
   source:
     repoURL: git@github.com:your-org/rke2-gitops.git
-    targetRevision: HEAD
+    targetRevision: main
     path: monitoring/grafana
+    helm:
+      dependencyUpdate: true 
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
