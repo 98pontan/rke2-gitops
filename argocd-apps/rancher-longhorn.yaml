@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rancher-longhorn
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.longhorn.io
+    chart: longhorn
+    targetRevision: 1.11.1 
+    helm:
+      values: |
+        # You can inline your values here or point to a file in a git repo
+        persistence:
+          defaultClass: true
+        preUpgradeChecker:
+            jobEnabled: false
+        defaultSettings:
+          # This ensures it doesn't get stuck again on next delete
+          deletingConfirmationFlag: true 
+          defaultReplicaCount: 2
+          storageMinimalAvailablePercentage: 15
+        ingress:
+          enabled: true
+          host: longhorn.local
+          ingressClassName: nginx
+          tls: true
+          annotations:
+            cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      # prune: true
+      # selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipHooks=true
+      - SkipDryRunOnMissingResource=true
