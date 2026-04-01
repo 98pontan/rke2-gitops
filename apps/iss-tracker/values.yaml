@@ -126,9 +126,10 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 
-nodeSelector:
-   environment: labb
+nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
+affinity: 
+  kubernetes.io/arch: arm64
+
