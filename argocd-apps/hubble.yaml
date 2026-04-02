@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium-hubble
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: cilium
+    repoURL: https://helm.cilium.io/
+    targetRevision: 1.18.6
+    helm:
+      values: |
+        cni:
+          binPath: /var/lib/rancher/rke2/bin
+          confPath: /etc/cni/net.d
+        hubble:
+          enabled: true
+          relay:
+            enabled: true
+          ui:
+            enabled: true
+            service:
+              type: ClusterIP
+            ingress:
+              enabled: true
+              className: nginx
+              annotations:
+                # Use your RKE2's default cert-manager or secret if you have one
+                kubernetes.io/ingress.class: nginx
+              hosts:
+                - hubble.local
+              paths:
+                - /
+          metrics:
+            enabled:
+              - dns
+              - drop
+              - tcp
+              - flow
+              - icmp
+              - http
+          installNoConfs: true
+         # This is needed to prevent cilium from trying to install its own CNI configuration which can cause issues with RKE2's CNI setup
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - Replace=true
