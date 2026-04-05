@@ -1,0 +1,73 @@
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    amd.com/gpu: 1
+    cpu: "4"      # Allow bursts for transcoding/scans
+    memory: 4Gi
+
+nodeSelector:
+  resources: media
+# -- Persistence: Metadata & Media
+# Crucial: Jellyfin performance depends heavily on fast metadata storage.
+persistence:
+  config:
+    enabled: true
+    storageClass: "longhorn" # Use an SSD-backed storage class if possible
+    accessMode: ReadWriteOnce
+    size: 20Gi
+  media:
+    enabled: true
+    type: pvc            # Changed to PVC
+    storageClass: "longhorn"
+    accessMode: ReadWriteMany # Use RWX if you want other pods to scan media simultaneously
+    size: 80Gi          # Adjust based on your library size
+    mountPath: /data/media
+
+# -- Hardware Acceleration (Intel QuickSync Example)
+# This is the gold standard for 2026. 
+# It requires the Intel Device Plugin to be installed in your cluster.
+controllers:
+  main:
+    containers:
+      main:
+        securityContext:
+          # Required to access /dev/dri for transcoding
+          supplementalGroups: [44, 107] # Typical IDs for video/render groups
+        resources:
+          limits:
+            gpu.intel.com/i915: 1
+
+# -- Networking & Ingress
+service:
+  main:
+    ports:
+      http:
+        port: 8096
+
+ingress:
+  main:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0" # Allow large metadata uploads
+    hosts:
+      - host: jellyfin.yourdomain.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts:
+          - jellyfin.yourdomain.com
+        secretName: jellyfin-general-tls
+
+# -- Performance Tweaks
+env:
+  # Reduce logging verbosity to save disk IO
+  - name: JELLYFIN_LOG_LEVEL
+    value: "Information"
+  # Set the cache directory to a subfolder in config for easier management
+  - name: JELLYFIN_CACHE_DIR
+    value: "/config/cache"
