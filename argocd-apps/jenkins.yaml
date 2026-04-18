@@ -1,25 +1,22 @@
 # apiVersion: argoproj.io/v1alpha1
 # kind: Application
 # metadata:
-#   name: jellyfin
+#   name: jenkins
 #   namespace: argocd
 # spec:
 #   project: default
 #   sources:
 #     # Source 1: The Upstream Chart
-#     - repoURL: 'https://djjudas21.github.io/charts/'
-#       chart: jellyfin
+#     - repoURL: 'https://charts.jenkins.io'
+#       chart: jenkinsci/jenkins 
 #       targetRevision: 4.0.4
 #     # Source 2: Git Repository with Custom Values
 #     - repoURL: 'https://github.com/98pontan/rke2-gitops.git'
 #       targetRevision: main
-#       ref: apps/jellyfin
+#       ref: apps/jenkins
 #   destination:
-#     server: 'https://kubernetes.default.svc'
-#     namespace: media
-#   helm:
-#     valueFiles:
-#       - $values-repo/apps/jellyfin/values.yaml
+#     server: https://kubernetes.default.svc
+#     namespace: iss-tracker
 #   syncPolicy:
 #     automated:
 #       prune: true

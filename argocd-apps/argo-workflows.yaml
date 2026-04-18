@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-workflows
+    targetRevision: 4.0.4
+    helm:
+      releaseName: argo-workflows
+      values: |
+        server:
+          enabled: true
+          replicas: 1
+          serviceType: ClusterIP
+          servicePort: 2746
+          extraArgs:
+            - --auth-mode=server
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+        controller:
+          replicas: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          workflowDefaults:
+            spec:
+              ttlStrategy:
+                secondsAfterFinished: 300
+
+        workflow:
+          rbac:
+            create: true
+          serviceAccount:
+            create: true
+
+        persistence:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
