@@ -4,7 +4,7 @@ metadata:
   name: grafana-dash-alerts
   namespace: argocd
 spec:
-  project: default
+  project: infra
   source:
     repoURL: https://github.com/98pontan/rke2-gitops.git
     path: grafana/

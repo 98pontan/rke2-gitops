@@ -6,7 +6,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: infra
   source:
     repoURL: 'https://releases.rancher.com/server-charts/stable'
     chart: rancher
@@ -15,8 +15,6 @@ spec:
       parameters:
         - name: hostname
           value: rancher.local # Replace with your actual domain
-        - name: bootstrapPassword
-          value: "hello123" # Change this for initial login
         - name: replicas
           value: "1"
 

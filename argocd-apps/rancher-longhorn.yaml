@@ -4,11 +4,11 @@ metadata:
   name: rancher-longhorn
   namespace: argocd
 spec:
-  project: default
+  project: infra
   source:
     repoURL: https://charts.longhorn.io
     chart: longhorn
-    targetRevision: 1.11.1 
+    targetRevision: 1.11.1
     helm:
       values: |
         # You can inline your values here or point to a file in a git repo
@@ -18,7 +18,7 @@ spec:
             jobEnabled: false
         defaultSettings:
           # This ensures it doesn't get stuck again on next delete
-          deletingConfirmationFlag: true 
+          deletingConfirmationFlag: true
           defaultReplicaCount: 2
           storageMinimalAvailablePercentage: 15
         ingress:

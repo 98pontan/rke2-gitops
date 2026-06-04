@@ -1,25 +1,52 @@
-# apiVersion: argoproj.io/v1alpha1
-# kind: Application
-# metadata:
-#   name: jenkins
-#   namespace: argocd
-# spec:
-#   project: default
-#   sources:
-#     # Source 1: The Upstream Chart
-#     - repoURL: 'https://charts.jenkins.io'
-#       chart: jenkinsci/jenkins 
-#       targetRevision: 4.0.4
-#     # Source 2: Git Repository with Custom Values
-#     - repoURL: 'https://github.com/98pontan/rke2-gitops.git'
-#       targetRevision: main
-#       ref: apps/jenkins
-#   destination:
-#     server: https://kubernetes.default.svc
-#     namespace: iss-tracker
-#   syncPolicy:
-#     automated:
-#       prune: true
-#       selfHeal: true
-#     syncOptions:
-#       - CreateNamespace=true
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jenkins
+  namespace: argocd
+spec:
+  project: infra
+  sources:
+    - repoURL: 'https://charts.jenkins.io'
+      chart: jenkins
+      targetRevision: 5.5.0
+      helm:
+      values: |
+        controller:
+          componentName: "jenkins-controller"
+
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+
+          # installPlugins:
+          #   - "kubernetes:4404.v0f04c669d0d3"
+          #   - "workflow-aggregator:600.vb_b_8cdd2112b_7"
+          #   - "git:5.5.0"
+          #   - "github:1.40.0"
+          #   - "pipeline-stage-view:2.34"
+
+          # Standard inbound agent, no host path overrides needed here
+          agent:
+            enabled: true
+            image: "jenkins/inbound-agent"
+            tag: "latest"
+
+        # 2. Use your Longhorn StorageClass for Jenkins master data
+        persistence:
+          enabled: true
+          storageClass: "longhorn" # Uses Longhorn for resilient controller data
+          size: "10Gi"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devops-ci
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

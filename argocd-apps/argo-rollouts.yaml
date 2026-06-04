@@ -4,7 +4,7 @@ metadata:
   name: argo-rollouts
   namespace: argocd
 spec:
-  project: default
+  project: infra
   source:
     repoURL: https://argoproj.github.io/argo-helm
     chart: argo-rollouts
@@ -17,12 +17,12 @@ spec:
             enabled: true
             ingressClassName: nginx
             hosts:
-              - rollouts.example.com 
+              - rollouts.example.com
             annotations:
               cert-manager.io/cluster-issuer: "letsencrypt-prod"
               nginx.ingress.kubernetes.io/ssl-redirect: "true"
               # Unlike ArgoCD server, the Rollouts dashboard is plain HTTP internally
-              nginx.ingress.kubernetes.io/backend-protocol: "HTTP" 
+              nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
             tls:
               - secretName: argo-rollouts-dashboard-tls
                 hosts:

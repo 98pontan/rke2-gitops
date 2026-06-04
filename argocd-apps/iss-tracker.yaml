@@ -4,7 +4,7 @@ metadata:
   name: iss-tracker
   namespace: argocd
 spec:
-  project: default
+  project: apps
   source:
     repoURL: https://github.com/98pontan/rke2-gitops.git
     path: apps/iss-tracker
