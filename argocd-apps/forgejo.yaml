@@ -17,11 +17,13 @@ spec:
             # 1. Enable the built-in Container & Artifact Storage Registry
             server:
               DOMAIN: "forgejo.local"
-              ROOT_URL: "http://forgejo.local/"
+              ROOT_URL: "https://forgejo.local/"
               HTTP_PORT: 3000
             packages:
-              ENABLED: true
+              ENABLED: "true"
             # Minimal security setup
+            actions:
+              ENABLED: "true"
             service:
               DISABLE_REGISTRATION: false # Set to true after creating your first admin account
               REQUIRE_SIGNIN_VIEW: true
