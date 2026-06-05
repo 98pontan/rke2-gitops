@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forgejo-runner
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    chart: forgejo-runner
+    # Uses the official verified Codeberg OCI helm repository path
+    repoURL: 'oci://codeberg.org/wrenix/helm-charts/forgejo-runner'
+    targetRevision: 0.7.5 # PINNED CHART VERSION
+    helm:
+      releaseName: forgejo-runner
+      valuesObject:
+        knownLastVersion: true
+        runner:
+          config:
+            create: true
+            file:
+              log:
+                level: "info"
+              runner:
+                # 1. Point it straight to your internal cluster service endpoint
+                instance: "http://forgejo-http.devops-ci.svc.cluster.local:3000"
+                # 2. Tell the chart where to find your security token
+                token_secret: "forgejo-runner-token"
+                capacity: 2
+                labels:
+                  - "ubuntu-latest:docker://node:20-bullseye"
+
+        # 3. Spins up an isolated sidecar container so your runner can execute docker commands safely
+        dind:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devops-ci
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
