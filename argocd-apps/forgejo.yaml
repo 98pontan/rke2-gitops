@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forgejo
+  namespace: argocd
+spec:
+  # Uses the 'infra' or 'devops-tools' AppProject we discussed earlier
+  project: infra
+  source:
+    repoURL: 'code.forgejo.org/forgejo-helm'
+    chart: forgejo
+    targetRevision: 17.1.0 # Latest verified stable Helm wrapper version
+    helm:
+      values: |
+        gitea:
+          config:
+            # 1. Enable the built-in Container & Artifact Storage Registry
+            server:
+              DOMAIN: "forgejo.local"
+              ROOT_URL: "http://forgejo.local/"
+              HTTP_PORT: 3000
+            packages:
+              ENABLED: true
+            # Minimal security setup
+            service:
+              DISABLE_REGISTRATION: false # Set to true after creating your first admin account
+              REQUIRE_SIGNIN_VIEW: true
+
+        # 2. Leverage Longhorn storage for your code repositories & packages
+        persistence:
+          enabled: true
+          storageClass: "longhorn"
+          size: "20Gi"
+
+        # 3. Expose the Forgejo Web GUI and the OCI Container Registry
+        ingress:
+          enabled: true
+          className: "nginx"
+          hosts:
+            - host: forgejo.local
+              paths:
+                - path: /
+                  pathType: Prefix
+
+        # Optional: Disable the internal SSH service if you only plan to use HTTPS/Git
+        service:
+          ssh:
+            type: ClusterIP
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: devops-ci
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

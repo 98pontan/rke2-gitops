@@ -1,59 +1,59 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: jenkins
-  namespace: argocd
-spec:
-  project: infra
-  sources:
-    - repoURL: 'https://charts.jenkins.io'
-      chart: jenkins
-      targetRevision: 5.9.22
-      helm:
-        # FIXED: Shifted right by 2 spaces to sit properly under 'helm:'
-        values: |
-          controller:
-            componentName: "jenkins-controller"
-            podSecurityContext:
-              fsGroup: 1000
-              runAsUser: 1000
-            ingress:
-              enabled: true
-              apiVersion: "networking.k8s.io/v1"
-              ingressClassName: "nginx"
-              hostName: "jenkins.local" # Put your own domain/hosts file mapping here
-              path: "/"
-            resources:
-              requests:
-                cpu: "500m"
-                memory: "1Gi"
-              limits:
-                cpu: "2"
-                memory: "2Gi"
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: jenkins
+#   namespace: argocd
+# spec:
+#   project: infra
+#   sources:
+#     - repoURL: 'https://charts.jenkins.io'
+#       chart: jenkins
+#       targetRevision: 5.9.22
+#       helm:
+#         # FIXED: Shifted right by 2 spaces to sit properly under 'helm:'
+#         values: |
+#           controller:
+#             componentName: "jenkins-controller"
+#             podSecurityContext:
+#               fsGroup: 1000
+#               runAsUser: 1000
+#             ingress:
+#               enabled: true
+#               apiVersion: "networking.k8s.io/v1"
+#               ingressClassName: "nginx"
+#               hostName: "jenkins.local" # Put your own domain/hosts file mapping here
+#               path: "/"
+#             resources:
+#               requests:
+#                 cpu: "500m"
+#                 memory: "1Gi"
+#               limits:
+#                 cpu: "2"
+#                 memory: "2Gi"
 
-            installPlugins:
-              - "kubernetes"
-              - "workflow-aggregator"
-              - "git"
-              - "github"
-              - "pipeline-stage-view"
+#             installPlugins:
+#               - "kubernetes"
+#               - "workflow-aggregator"
+#               - "git"
+#               - "github"
+#               - "pipeline-stage-view"
 
-            agent:
-              enabled: true
-              image: "jenkins/inbound-agent"
-              tag: "latest"
+#             agent:
+#               enabled: true
+#               image: "jenkins/inbound-agent"
+#               tag: "latest"
 
-          persistence:
-            enabled: true
-            storageClass: "longhorn"
-            size: "10Gi"
+#           persistence:
+#             enabled: true
+#             storageClass: "longhorn"
+#             size: "10Gi"
 
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: devops-ci
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+#   destination:
+#     server: https://kubernetes.default.svc
+#     namespace: devops-ci
+#   syncPolicy:
+#     automated:
+#       prune: true
+#       selfHeal: true
+#     syncOptions:
+#       - CreateNamespace=true
