@@ -22,6 +22,9 @@ spec:
           type: Socket
       - name: runner-data
         emptyDir: {}
+      - name: runner-config-vol
+        configMap:
+          name: forgejo-runner-config-reg
 
       # Step 1: Discover and Register the runner via K8s Internal DNS
       initContainers:

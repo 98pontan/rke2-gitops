@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forgejo-runner-config-reg
+  namespace: devops-ci
+data:
+  config.yaml: |
+    log:
+      level: info
+    container:
+      docker_host: "unix:///var/run/docker.sock"
+    # FIXED: The new declarative connection schema for Forgejo v12+
+    server:
+      connections:
+        devops-cluster:
+          url: "http://forgejo-http:3000"
+          # Paste the EXACT values generated from the Forgejo UI creation dialog:
+          uuid: "3d650f11-ae23-410c-9c34-917279116263"
+          token: "aa32890b1efde5e6e0127e38feba20411d7a5135"
+          labels:
+            - "ubuntu-latest:docker://node:lts"
+            - "self-hosted"
