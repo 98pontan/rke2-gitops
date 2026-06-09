@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forgejo-runner
+  namespace: devops-ci
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: forgejo-runner
+  template:
+    metadata:
+      labels:
+        app: forgejo-runner
+    spec:
+      # Mount the baremetal node's native Docker socket & a runtime cache folder
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+      - name: runner-data
+        emptyDir: {}
+
+      # Step 1: Discover and Register the runner via K8s Internal DNS
+      initContainers:
+      - name: register-runner
+        image: data.forgejo.org/forgejo/runner:12
+        command:
+        - sh
+        - -c
+        - |
+          # Prevent re-registration loops on Pod restarts
+          if [ -f /data/.runner ]; then
+            echo "Runner already configured. Skipping registration."
+            exit 0
+          fi
+
+          echo "Registering runner against Forgejo Service Discovery..."
+          forgejo-runner register \
+            --no-interactive \
+            --instance "$URL" \
+            --no-interactive \
+            --uuid 3d650f11-ae23-410c-9c34-917279116263 \
+            --token "${FORGEJO_RUNNER_REGISTRATION_TOKEN}" \
+            --name "k8s-shared-socket-runner" \
+        env:
+        - name: URL
+          # K8s Internal Service Discovery (Service Name . Namespace . svc . cluster . local)
+          value: "http://forgejo-http:3000"
+        - name: FORGEJO_RUNNER_REGISTRATION_TOKEN
+          value: "aa32890b1efde5e6e0127e38feba20411d7a5135"
+          # valueFrom:
+          #   secretKeyRef:
+          #     name: forgejo-runner-token
+          #     key: token
+        volumeMounts:
+        - name: runner-data
+          mountPath: /data
+
+      # Step 2: The lightweight runner daemon utilizing the host's Docker socket
+      containers:
+      - name: runner
+        image: data.forgejo.org/forgejo/runner:12
+        command: ["forgejo-runner", "daemon"]
+        workingDir: /data
+        volumeMounts:
+        - name: runner-data
+          mountPath: /data
+        - name: docker-socket
+          mountPath: /var/run/docker.sock

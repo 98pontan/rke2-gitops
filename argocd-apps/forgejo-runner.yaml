@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forgejo-runner
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: https://github.com/98pontan/rke2-gitops.git
+    targetRevision: HEAD
+    path: apps/forgejo-runner
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devops-ci
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
