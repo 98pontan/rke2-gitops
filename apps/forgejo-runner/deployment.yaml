@@ -14,6 +14,7 @@ spec:
       labels:
         app: forgejo-runner
     spec:
+
       # Mount the baremetal node's native Docker socket & a runtime cache folder
       volumes:
       - name: docker-socket
@@ -27,10 +28,14 @@ spec:
           name: forgejo-runner-config-reg
 
       # Step 1: Discover and Register the runner via K8s Internal DNS
-      initContainers:
-      - name: register-runner
+      containers:
+      - name: runner
         image: data.forgejo.org/forgejo/runner:12
         command: ["forgejo-runner", "daemon", "--config", "/config/config.yaml"]
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
         # env:
         # - name: URL
         #   # K8s Internal Service Discovery (Service Name . Namespace . svc . cluster . local)
@@ -41,20 +46,10 @@ spec:
           #   secretKeyRef:
           #     name: forgejo-runner-token
           #     key: token
+
         volumeMounts:
         - name: runner-config-vol
           mountPath: /config
-        - name: runner-data
-          mountPath: /data
-
-
-      # Step 2: The lightweight runner daemon utilizing the host's Docker socket
-      containers:
-      - name: runner
-        image: data.forgejo.org/forgejo/runner:12
-        command: ["forgejo-runner", "daemon"]
-        workingDir: /data
-        volumeMounts:
         - name: runner-data
           mountPath: /data
         - name: docker-socket
