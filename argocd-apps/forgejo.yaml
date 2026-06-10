@@ -14,27 +14,27 @@ spec:
       values: |
         gitea:
           config:
-            # 1. Enable the built-in Container & Artifact Storage Registry
             server:
               DOMAIN: "forgejo.local"
               ROOT_URL: "https://forgejo.local/"
               HTTP_PORT: 3000
+              # FIXED: Explicitly tell the UI engine to construct links using port 2222
+              SSH_DOMAIN: "forgejo.local"
+              SSH_PORT: 2222
+              START_SSH_SERVER: true # Ensures Forgejo spins up its internal SSH listener
             packages:
               ENABLED: "true"
-            # Minimal security setup
             actions:
               ENABLED: "true"
             service:
-              DISABLE_REGISTRATION: false # Set to true after creating your first admin account
+              DISABLE_REGISTRATION: false
               REQUIRE_SIGNIN_VIEW: true
 
-        # 2. Leverage Longhorn storage for your code repositories & packages
         persistence:
           enabled: true
           storageClass: "longhorn"
           size: "20Gi"
 
-        # 3. Expose the Forgejo Web GUI and the OCI Container Registry
         ingress:
           enabled: true
           className: "nginx"
@@ -44,10 +44,11 @@ spec:
                 - path: /
                   pathType: Prefix
 
-        # Optional: Disable the internal SSH service if you only plan to use HTTPS/Git
         service:
           ssh:
+            enabled: true
             type: ClusterIP
+            port: 22
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: devops-ci
