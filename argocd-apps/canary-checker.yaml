@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: canary-checker
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: https://flanksource.github.io/charts
+    chart: canary-checker
+    targetRevision: "1.2.0"          # pin to a specific version once you've tested, e.g. "1.x.x"
+    helm:
+      values: |
+        serviceMonitor: true
+        grafanaDashboards: true
+        global:
+          ui:
+            host: canary-checker.yourdomain.com   # optional, remove if not exposing via ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: canary-checker
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
