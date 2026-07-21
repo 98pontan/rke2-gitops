@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kuberhealthy
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: https://kuberhealthy.github.io/kuberhealthy/helm-repos
+    chart: kuberhealthy
+    targetRevision: "110"   # check latest with: helm search repo kuberhealthy/kuberhealthy --versions
+    helm:
+      values: |
+        rbac:
+          create: true
+
+        prometheus:
+          enabled: true
+          serviceMonitor: false   # flip true if you're using kube-prometheus-stack's ServiceMonitor CRD
+
+        service:
+          type: ClusterIP
+          port: 80
+
+        # Adjust if you're on kube-prometheus-stack and want automatic scraping
+        serviceMonitor:
+          enabled: true
+          namespace: monitoring
+
+        serviceMonitorLabels:
+          release: prometheus-stack
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kuberhealthy
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
