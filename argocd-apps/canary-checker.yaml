@@ -12,10 +12,16 @@ spec:
     helm:
       values: |
         serviceMonitor: true
+        serviceMonitorLabels:
+          release: prometheus-stack
         grafanaDashboards: true
-        global:
-          ui:
-            host: canary-checker.yourdomain.com   # optional, remove if not exposing via ingress
+
+        flanksource-ui:
+          enabled: true
+          ingress:
+            enabled: true
+            className: nginx
+            host: canary-checker.local
   destination:
     server: https://kubernetes.default.svc
     namespace: canary-checker
