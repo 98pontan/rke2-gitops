@@ -21,6 +21,11 @@ spec:
           deletingConfirmationFlag: true
           defaultReplicaCount: 2
           storageMinimalAvailablePercentage: 15
+        metrics:
+          serviceMonitor:
+            enabled: true
+            additionalLabels:
+              release: prometheus-stack
         ingress:
           enabled: true
           host: longhorn.local
