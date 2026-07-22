@@ -1,0 +1,29 @@
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: "26.6.4"
+
+replicas: 1
+
+command:
+  - "/opt/keycloak/bin/kc.sh"
+  - "start"
+  - "--http-enabled=true"
+  - "--http-port=8080"
+  - "--hostname-strict=false"
+
+database:
+  vendor: postgres
+  hostname: keycloak-postgres
+  port: 5432
+  database: keycloak
+  username: keycloak
+  existingSecret: keycloak-db-secret   # uses key "password" by default — matches yours
+
+extraEnv: |
+  - name: KC_BOOTSTRAP_ADMIN_USERNAME
+    value: admin
+  - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-admin-secret
+        key: admin-password
