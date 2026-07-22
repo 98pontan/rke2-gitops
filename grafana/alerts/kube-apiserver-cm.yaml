@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-apiserver-down
+  namespace: monitoring
+  labels:
+    grafana_alert: "1"
+data:
+  kube-apiserver-down.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: canary
+        folder: Canary
+        interval: 5m
+        rules:
+          - uid: bfsve8p8hpd6oe
+            title: kube-apiserver-down
+            condition: C
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  editorMode: builder
+                  expr: canary_check_failed_count{canary_name="kube-apiserver-check"}
+                  instant: true
+                  intervalMs: 1000
+                  legendFormat: __auto
+                  maxDataPoints: 43200
+                  range: false
+                  refId: A
+              - refId: C
+                queryType: expression
+                datasourceUid: __expr__
+                model:
+                  conditions:
+                      - evaluator:
+                          params:
+                              - 0
+                          type: gt
+                        operator:
+                          type: and
+                        query:
+                          params:
+                              - C
+                        reducer:
+                          params: []
+                          type: last
+                        type: query
+                  datasource:
+                      type: __expr__
+                      uid: __expr__
+                  expression: A
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  refId: C
+                  type: threshold
+            noDataState: NoData
+            execErrState: Error
+            for: 5m
+            annotations:
+              summary: Kube-apiserver is no longer reachable
+            isPaused: false
+            notification_settings:
+              receiver: Pontus Jirbratt
