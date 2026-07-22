@@ -1,0 +1,44 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: keycloak
+    targetRevision: "25.2.0"   # match whatever you pulled with helm
+    helm:
+      values: |
+        auth:
+          adminUser: admin
+          existingSecret: keycloak-admin-secret
+
+        postgresql:
+          enabled: true
+          auth:
+            existingSecret: keycloak-db-secret
+
+        ingress:
+          enabled: true
+          hostname: keycloak.local
+          ingressClassName: nginx
+          tls: true
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+
+        replicaCount: 2
+
+        metrics:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
