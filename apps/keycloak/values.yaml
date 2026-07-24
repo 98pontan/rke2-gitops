@@ -10,6 +10,8 @@ command:
   - "--http-enabled=true"
   - "--http-port=8080"
   - "--hostname-strict=false"
+  - "--proxy-headers=xforwarded"     # trust X-Forwarded-* from nginx ingress
+  - "--hostname=keycloak.local"  # this is the hostname that will be used in the ingress
 
 database:
   vendor: postgres
@@ -27,3 +29,20 @@ extraEnv: |
       secretKeyRef:
         name: keycloak-admin-secret
         key: admin-password
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod   # match your ClusterIssuer name
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+  rules:
+    -
+      host: keycloak.local     # <-- replace with your actual domain
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - keycloak.local       # <-- replace with your actual domain
+      secretName: keycloak-tls
