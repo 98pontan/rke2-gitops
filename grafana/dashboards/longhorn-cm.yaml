@@ -24,10 +24,8 @@ data:
           },
           "annotations": {
             "grafana.app/createdBy": "user:ffsrhntw0oem8c",
-            "grafana.app/folder": "efsvgufyt6zuoa",
             "grafana.app/saved-from-ui": "Grafana v13.1.0 (b309c9bb3b)",
-            "grafana.app/folderTitle": "Longhorn",
-            "grafana.app/folderUrl": "/dashboards/f/efsvgufyt6zuoa/longhorn"
+            "grafana.app/folderTitle": "Longhorn"
           }
         },
         "spec": {
