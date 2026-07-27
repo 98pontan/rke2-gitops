@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: canary-health-checks
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: https://github.com/98pontan/rke2-gitops.git
+    path: canary-health-checks/
+    targetRevision: main
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: canary-health-checks
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

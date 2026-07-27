@@ -1,0 +1,21 @@
+apiVersion: canaries.flanksource.com/v1
+kind: Canary
+metadata:
+  name: kube-system-checks
+  namespace: canary-checker
+spec:
+  schedule: "@every 5m"
+  kubernetes:
+    - name: kube-system
+      kind: Pod
+      healthy: true
+      namespaceSelector:
+        name: kube-system
+      display:
+        expr: |
+          dyn(results).
+          map(i, i.Object).
+          filter(i, !k8s.isHealthy(i)).
+          map(i, "%s/%s -> %s".format([i.metadata.namespace, i.metadata.name, k8s.getHealth(i).message])).join('\n')
+      test:
+        expr: dyn(results).all(x, k8s.isHealthy(x))
