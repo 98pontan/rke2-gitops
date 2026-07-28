@@ -1,0 +1,18 @@
+serviceMonitor: true
+serviceMonitorLabels:
+  release: prometheus-stack
+
+grafanaDashboards: true
+
+flanksource-ui:
+  enabled: true
+  ingress:
+    enabled: true
+    className: nginx
+    host: canary-checker.pontus-homelab.space
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"
+    tls:
+      - secretName: canary-checker-tls
+        hosts:
+          - canary-checker.pontus-homelab.space

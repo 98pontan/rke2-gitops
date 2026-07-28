@@ -5,23 +5,16 @@ metadata:
   namespace: argocd
 spec:
   project: infra
-  source:
-    repoURL: https://flanksource.github.io/charts
+  sources:
+  - repoURL: https://flanksource.github.io/charts
     chart: canary-checker
-    targetRevision: "1.2.0"          # pin to a specific version once you've tested, e.g. "1.x.x"
+    targetRevision: "1.2.0"
     helm:
-      values: |
-        serviceMonitor: true
-        serviceMonitorLabels:
-          release: prometheus-stack
-        grafanaDashboards: true
-
-        flanksource-ui:
-          enabled: true
-          ingress:
-            enabled: true
-            className: nginx
-            host: canary-checker.local
+      valueFiles:
+        - $values/values/canary-checker/values.yaml
+  - repoURL: https://github.com/98pontan/rke2-gitops.git
+    targetRevision: main
+    ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: canary-checker
