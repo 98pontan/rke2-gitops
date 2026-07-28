@@ -11,7 +11,7 @@ command:
   - "--http-port=8080"
   - "--hostname-strict=false"
   - "--proxy-headers=xforwarded"     # trust X-Forwarded-* from nginx ingress
-  - "--hostname=keycloak.local"  # this is the hostname that will be used in the ingress
+  - "--hostname=keycloak.pontus-homelab.space"  # this is the hostname that will be used in the ingress
 
 database:
   vendor: postgres
@@ -34,15 +34,15 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod   # match your ClusterIssuer name
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare   # match your ClusterIssuer name
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
   rules:
     -
-      host: keycloak.local     # <-- replace with your actual domain
+      host: keycloak.pontus-homelab.space      # <-- replace with your actual domain
       paths:
         - path: /
           pathType: Prefix
   tls:
     - hosts:
-        - keycloak.local       # <-- replace with your actual domain
+        - keycloak.pontus-homelab.space        # <-- replace with your actual domain
       secretName: keycloak-tls
