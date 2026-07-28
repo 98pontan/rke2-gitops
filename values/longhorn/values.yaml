@@ -1,0 +1,28 @@
+# You can inline your values here or point to a file in a git repo
+persistence:
+  defaultClass: true
+
+preUpgradeChecker:
+    jobEnabled: false
+
+defaultSettings:
+  # This ensures it doesn't get stuck again on next delete
+  deletingConfirmationFlag: true
+  defaultReplicaCount: 2
+  storageMinimalAvailablePercentage: 15
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: prometheus-stack
+
+ingress:
+  enabled: true
+  host: longhorn.pontus-homelab.space
+  path: /
+  ingressClassName: nginx
+  tls: true
+  tlsSecret: longhorn-tls
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"

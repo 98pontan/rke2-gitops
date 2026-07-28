@@ -5,34 +5,16 @@ metadata:
   namespace: argocd
 spec:
   project: infra
-  source:
-    repoURL: https://charts.longhorn.io
-    chart: longhorn
-    targetRevision: 1.11.1
-    helm:
-      values: |
-        # You can inline your values here or point to a file in a git repo
-        persistence:
-          defaultClass: true
-        preUpgradeChecker:
-            jobEnabled: false
-        defaultSettings:
-          # This ensures it doesn't get stuck again on next delete
-          deletingConfirmationFlag: true
-          defaultReplicaCount: 2
-          storageMinimalAvailablePercentage: 15
-        metrics:
-          serviceMonitor:
-            enabled: true
-            additionalLabels:
-              release: prometheus-stack
-        ingress:
-          enabled: true
-          host: longhorn.local
-          ingressClassName: nginx
-          tls: true
-          annotations:
-            cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  sources:
+    - repoURL: https://charts.longhorn.io
+      chart: longhorn
+      targetRevision: 1.11.1
+      helm:
+        valueFiles:
+          - $values/values/longhorn/values.yaml
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system
