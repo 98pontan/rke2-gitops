@@ -7,16 +7,16 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: infra
-  source:
-    repoURL: 'https://releases.rancher.com/server-charts/stable'
-    chart: rancher
-    targetRevision: v2.14.2 # Replace with your desired Rancher version
-    helm:
-      parameters:
-        - name: hostname
-          value: rancher.local # Replace with your actual domain
-        - name: replicas
-          value: "1"
+  sources:
+    - repoURL: 'https://releases.rancher.com/server-charts/stable'
+      chart: rancher
+      targetRevision: v2.14.2 # Replace with your desired Rancher version
+      helm:
+        valueFiles:
+          - $values/values/rancher/values.yaml
+    - repoURL: 'https://github.com/98pontan/rke2-gitops.git'
+      targetRevision: main
+      ref: values
 
   destination:
     server: 'https://kubernetes.default.svc'

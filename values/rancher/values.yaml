@@ -1,0 +1,9 @@
+hostname: rancher.pontus-homelab.space
+replicas: 1
+
+ingress:
+  ingressClassName: nginx
+  tls:
+    source: secret                      # Tells Rancher to use a K8s secret for SSL
+  extraAnnotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"
