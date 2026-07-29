@@ -1,6 +1,6 @@
 image:
   repository: quay.io/keycloak/keycloak
-  tag: "26.6.4"
+  tag: "26.7.0"
 
 replicas: 1
 
