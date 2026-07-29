@@ -1,0 +1,43 @@
+gitea:
+  config:
+    server:
+      DOMAIN: "forgejo.pontus-homelab.space"
+      ROOT_URL: "https://forgejo.pontus-homelab.space/"
+      HTTP_PORT: 3000
+      # FIXED: Explicitly tell the UI engine to construct links using port 2222
+      SSH_DOMAIN: "forgejo.pontus-homelab.space"
+      SSH_PORT: 2222
+      START_SSH_SERVER: true # Ensures Forgejo spins up its internal SSH listener
+    packages:
+      ENABLED: "true"
+    actions:
+      ENABLED: "true"
+    service:
+      DISABLE_REGISTRATION: false
+      REQUIRE_SIGNIN_VIEW: true
+
+persistence:
+  enabled: true
+  storageClass: "longhorn"
+  size: "20Gi"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"
+  tls:
+    - secretName: forgejo-tls
+      hosts:
+        - forgejo.pontus-homelab.space
+  hosts:
+    - host: forgejo.pontus-homelab.space
+      paths:
+        - path: /
+          pathType: Prefix
+
+service:
+  ssh:
+    enabled: true
+    type: ClusterIP
+    port: 22
