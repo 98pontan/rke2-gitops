@@ -1,0 +1,26 @@
+tunnel:
+  quickTunnel:
+    enabled: false
+  existingSecret: cloudflare-tunnel
+  existingSecretKey: token
+
+replicaCount: 2
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
