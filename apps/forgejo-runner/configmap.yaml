@@ -9,15 +9,12 @@ data:
       level: info
     container:
       docker_host: "unix:///var/run/docker.sock"
-      options: "--add-host=forgejo-http:10.43.86.23"
-    # FIXED: The new declarative connection schema for Forgejo v12+
     server:
       connections:
         devops-cluster:
-          url: "http://forgejo-http:3000"
-          # Paste the EXACT values generated from the Forgejo UI creation dialog:
-          uuid: "a2c5aeec-2ae0-4f09-94bb-f7352c7a42e9"
-          token: "87796e3aafcaf8a6f28ef6d342b18beffffd5294"
+          url: "https://forgejo.pontus-homelab.space"
+          uuid: "b335e561-6951-4f1a-8b1f-7bbcc78cc08c"
+          token: "f545e98c4186d19905e9e4d0c02ecf92133a11b2"
           labels:
             - "ubuntu-latest:docker://node:lts"
             - "self-hosted"
