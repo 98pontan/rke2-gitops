@@ -21,6 +21,15 @@ persistence:
   storageClass: "longhorn"
   size: "20Gi"
 
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node.kubernetes.io/worker
+              operator: In
+              values:
+                - "true"
 ingress:
   enabled: true
   className: "nginx"
