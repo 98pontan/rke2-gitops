@@ -15,6 +15,11 @@ gitea:
     service:
       DISABLE_REGISTRATION: false
       REQUIRE_SIGNIN_VIEW: true
+    oauth2_client:
+      ENABLE_AUTO_REGISTRATION: true   # auto-create Forgejo users on first Keycloak login
+      USERNAME: "preferred_username"    # or "email"/"nickname" depending on your claims
+      UPDATE_AVATAR: true
+      ACCOUNT_LINKING: "auto"
 
 persistence:
   enabled: true
