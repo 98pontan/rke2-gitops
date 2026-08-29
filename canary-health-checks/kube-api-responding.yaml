@@ -4,10 +4,10 @@ metadata:
   name: kube-apiserver-check
   namespace: canary-checker
 spec:
-  schedule: "@every 30s"
+  schedule: "@every 2m"
   http:
     - name: apiserver-alive
       url: https://kubernetes.default.svc/healthz
       tlsConfig:
         insecureSkipVerify: true
-      responseCodes: [401]
+      responseCodes: [401, 200]

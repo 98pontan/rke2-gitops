@@ -8,9 +8,8 @@ spec:
   kubernetes:
     - name: kube-system
       kind: Pod
+      namespace: kube-system
       healthy: true
-      namespaceSelector:
-        name: kube-system
       display:
         expr: |
           dyn(results).
