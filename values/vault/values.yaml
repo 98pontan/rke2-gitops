@@ -1,0 +1,57 @@
+# values.yaml for HashiCorp Vault Helm chart
+# 3-node bare-metal RKE2 cluster, HA via integrated storage (Raft)
+
+server:
+  ha:
+    enabled: true
+    replicas: 3
+    raft:
+      enabled: true
+      setNodeId: true
+
+    # This HCL block is required — it's what actually tells Vault to use
+    # raft storage and defines the listener. Without it, HA/raft flags
+    # alone don't do anything.
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable     = 1
+        address         = "[::]:8200"
+        cluster_address = "[::]:8201"
+        # If you terminate TLS at Vault instead of at the ingress,
+        # replace tls_disable with tls_cert_file / tls_key_file.
+      }
+
+      storage "raft" {
+        path = "/vault/data"
+      }
+
+      service_registration "kubernetes" {}
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path
+
+  # ingress lives under `server` in this chart, not top-level
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"   # not "className"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"
+      # If you keep TLS disabled at Vault (tls_disable = 1 above) and
+      # terminate TLS at nginx, this is also worth adding:
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - host: vault.pontus-homelab.space
+        paths:
+          - /
+    tls:
+      - secretName: vault-tls   # was "forgejo-tls" — leftover from another app
+        hosts:
+          - vault.pontus-homelab.space
+
+ui:
+  enabled: true
+  serviceType: "ClusterIP"
