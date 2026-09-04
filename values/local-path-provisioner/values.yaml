@@ -1,0 +1,7 @@
+storageClass:
+  defaultClass: false     # keep Longhorn as default; set this class explicitly for Vault
+  name: local-path
+nodePathMap:
+  - node: DEFAULT_PATH_FOR_NON_LISTED_NODES
+    paths:
+      - /opt/local-path-provisioner
