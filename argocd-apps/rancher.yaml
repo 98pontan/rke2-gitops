@@ -10,7 +10,7 @@ spec:
   sources:
     - repoURL: 'https://releases.rancher.com/server-charts/stable'
       chart: rancher
-      targetRevision: v2.14.2 # Replace with your desired Rancher version
+      targetRevision: v2.15.1 # Replace with your desired Rancher version
       helm:
         valueFiles:
           - $values/values/rancher/values.yaml
