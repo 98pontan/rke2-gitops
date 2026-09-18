@@ -9,7 +9,7 @@ spec:
   sources:
     - repoURL: 'code.forgejo.org/forgejo-helm'
       chart: forgejo
-      targetRevision: 17.1.0 # Latest verified stable Helm wrapper version
+      targetRevision: 17.1.7 # Latest verified stable Helm wrapper version
       helm:
         valueFiles:
           - $values/values/forgejo/values.yaml
