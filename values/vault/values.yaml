@@ -48,7 +48,7 @@ server:
         paths:
           - /
     tls:
-      - secretName: vault-tls   # was "forgejo-tls" — leftover from another app
+      - secretName: vault-tls
         hosts:
           - vault.pontus-homelab.space
 
