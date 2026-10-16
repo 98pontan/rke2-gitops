@@ -29,6 +29,11 @@ server:
 
       service_registration "kubernetes" {}
 
+  extraSecretEnvironmentVars:
+    - envName: KEYCLOAK_CLIENT_SECRET
+      secretName: vault-keycloak-oidc
+      secretKey: client_secret
+
   dataStorage:
     enabled: true
     size: 10Gi
