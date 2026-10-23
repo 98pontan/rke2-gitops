@@ -13,8 +13,8 @@ data:
       connections:
         devops-cluster:
           url: "https://forgejo.pontus-homelab.space"
-          uuid: "e5d55b88-6617-41a4-8b0d-a589db7468e2"
-          token: "a18151416281139e7735a6c3d51ea50799793992"
+          uuid: fc746fc5-d795-439d-aad1-51192d0c3173
+          token: adf89bba47d8513c4fc2f2b0f851a6509eb7b578
           labels:
             - "ubuntu-latest:docker://node:lts"
             - "self-hosted"
