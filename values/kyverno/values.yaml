@@ -3,6 +3,10 @@
 # Install/upgrade the CRDs with the chart
 crds:
   install: true
+  groups:
+    kyverno:
+      clusterpolicies: true
+      policies: true
 
 # Reusable worker-node affinity
 x-worker-affinity: &workerAffinity
