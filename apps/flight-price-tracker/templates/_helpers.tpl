@@ -1,62 +1,23 @@
-{{/*
-Expand the name of the chart.
-*/}}
-{{- define "flight-price-tracker.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{ include "app.fullname" . }} deployed to namespace {{ .Release.Namespace }}.
+{{- if .Values.vault.enabled }}
 
-{{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
-*/}}
-{{- define "flight-price-tracker.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+Vault (role "{{ .Values.vault.role }}"): secrets are injected as files under /vault/secrets/
+{{- range .Values.vault.secrets }}
+  /vault/secrets/{{ .name }}  <-  {{ include "app.vaultPath" (dict "root" $ "secret" .) }}
 {{- end }}
+{{- if not .Values.vault.secrets }}
+  (no secrets configured: set vault.secrets)
 {{- end }}
+The Vault policy only allows reading {{ default "secret" .Values.vault.mount }}/data/{{ .Release.Namespace }}/*
 {{- end }}
+{{- if .Values.ingress.enabled }}
 
-{{/*
-Create chart name and version as used by the chart label.
-*/}}
-{{- define "flight-price-tracker.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+Ingress:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
 {{- end }}
+{{- else if .Values.service.enabled }}
 
-{{/*
-Common labels
-*/}}
-{{- define "flight-price-tracker.labels" -}}
-helm.sh/chart: {{ include "flight-price-tracker.chart" . }}
-{{ include "flight-price-tracker.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end }}
-
-{{/*
-Selector labels
-*/}}
-{{- define "flight-price-tracker.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "flight-price-tracker.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
-
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "flight-price-tracker.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "flight-price-tracker.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
+Port-forward:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "app.fullname" . }} 8080:{{ .Values.service.port }}
 {{- end }}

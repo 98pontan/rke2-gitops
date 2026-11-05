@@ -1,0 +1,206 @@
+# -- Override the chart name used in resource names
+nameOverride: ""
+# -- Override the full resource name (default: <release>-<chart>, or just <release> if it contains the chart name)
+fullnameOverride: ""
+
+# -- Number of replicas (ignored when autoscaling.enabled)
+replicaCount: 1
+revisionHistoryLimit: 3
+
+image:
+  repository: forgejo.pontus-homelab.space/python-apps/flight-price-tracker
+  # -- Defaults to Chart.appVersion when empty
+  tag: "latest"
+  # -- Pin by digest (sha256:...). Takes precedence over tag when set
+  digest: ""
+  pullPolicy: Always
+
+# -- Pull secrets for the private registry. The secret must exist in the release namespace
+imagePullSecrets:
+  - name: forgejo-registry
+
+serviceAccount:
+  create: true
+  # -- Defaults to the fullname when empty
+  name: "flight-price-tracker"
+  annotations: {}
+  automountServiceAccountToken: true
+
+# ---------------------------------------------------------------------------
+# HashiCorp Vault Agent Injector
+# ---------------------------------------------------------------------------
+vault:
+  enabled: true
+  # -- Vault Kubernetes auth role. Access is scoped by the role's policy to secret/data/<namespace>/*
+  role: app
+  # -- KV v2 mount name
+  mount: secret
+  # -- Run the agent as a pre-populate-only init container (no sidecar). Use for Jobs or when secrets never change
+  prePopulateOnly: false
+  # -- Run the agent init container before other init containers
+  initFirst: false
+  # -- Secrets to inject. Each one becomes a file at /vault/secrets/<name>
+  #
+  # path:     relative paths are resolved to <mount>/data/<namespace>/<path>.
+  #           A path starting with "<mount>/" is used as is (it must include /data/ for KV v2).
+  #           Defaults to the secret's name.
+  # template: optional Vault Agent template to control the file format.
+  #
+  # secrets:
+  #   - name: config
+  #     path: config
+  #   - name: db
+  #     path: myapp/db
+  #     template: |
+  #       {{- with secret "secret/data/mynamespace/myapp/db" -}}
+  #       DB_USER={{ .Data.data.user }}
+  #       DB_PASSWORD={{ .Data.data.password }}
+  #       {{- end }}
+  secrets: []
+  # -- Extra vault.hashicorp.com/* annotations (override the generated ones), e.g.
+  # vault.hashicorp.com/agent-requests-cpu: 50m
+  # vault.hashicorp.com/agent-limits-cpu: 250m
+  # vault.hashicorp.com/agent-requests-mem: 64Mi
+  # vault.hashicorp.com/agent-limits-mem: 128Mi
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Container
+# ---------------------------------------------------------------------------
+# -- Port the app listens on. Set to null for workloads with no port
+containerPort: 8080
+
+command: []
+args: []
+
+# -- Environment variables as a simple map: NAME: value
+env:
+  - name: LOG_LEVEL
+    value: "DEBUG"
+#  LOG_LEVEL: info
+#  VAULT_SECRETS_DIR: /vault/secrets
+
+# -- Raw env entries for valueFrom (secretKeyRef, configMapKeyRef, fieldRef)
+envRaw: []
+#  - name: API_KEY
+#    valueFrom:
+#      secretKeyRef:
+#        name: my-secret
+#        key: api-key
+
+# -- envFrom sources (configMapRef / secretRef)
+envFrom: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+
+# -- Probes are empty by default so the pod becomes Ready without a health endpoint. Set them to match your app
+livenessProbe: {}
+#  httpGet:
+#    path: /healthz
+#    port: http
+#  initialDelaySeconds: 10
+readinessProbe: {}
+#  httpGet:
+#    path: /healthz
+#    port: http
+startupProbe: {}
+
+lifecycle: {}
+terminationGracePeriodSeconds: null
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: false
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Extra volumes and mounts (e.g. an emptyDir at /tmp when readOnlyRootFilesystem is true)
+volumes: []
+#  - name: tmp
+#    emptyDir: {}
+volumeMounts: []
+#  - name: tmp
+#    mountPath: /tmp
+
+# ---------------------------------------------------------------------------
+# Pod metadata and scheduling
+# ---------------------------------------------------------------------------
+# -- Annotations on the Deployment
+deploymentAnnotations: {}
+# -- Annotations on the pod template (merged with the generated Vault annotations)
+podAnnotations: {}
+podLabels: {}
+
+strategy: {}
+#  type: RollingUpdate
+#  rollingUpdate:
+#    maxUnavailable: 0
+#    maxSurge: 1
+
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node.kubernetes.io/worker
+              operator: In
+              values:
+                - "true"
+topologySpreadConstraints: []
+
+# ---------------------------------------------------------------------------
+# Service, Ingress, scaling
+# ---------------------------------------------------------------------------
+service:
+  enabled: true
+  type: ClusterIP
+  port:  587
+  # -- Container port name or number
+  targetPort: http
+  nodePort: null
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  #  cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+  hosts: []
+  #  - host: myapp.pontus-homelab.space
+  #    paths:
+  #      - path: /
+  #        pathType: Prefix
+  tls: []
+  #  - secretName: myapp-tls
+  #    hosts:
+  #      - myapp.pontus-homelab.space
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
