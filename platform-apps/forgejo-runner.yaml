@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/98pontan/rke2-gitops.git
     targetRevision: HEAD
-    path: apps/forgejo-runner
+    path: devops-apps/forgejo-runner
   destination:
     server: https://kubernetes.default.svc
     namespace: devops-ci
