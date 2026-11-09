@@ -1,146 +1,232 @@
-# Default values for iss-tracker.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# -- Override the chart name used in resource names and the app.kubernetes.io/name label.
+# Must stay "iss-tracker": the live Deployment selector uses it and selectors are immutable
+nameOverride: "iss-tracker"
+# -- Override the full resource name (default: <release>-<chart>, or just <release> if it contains the chart name)
+# Keeps resource names short: Deployment/Service/SA "iss-tracker", Secret "iss-tracker-config"
+fullnameOverride: "iss-tracker"
 
-# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+# -- Number of replicas. Keep at 1: every replica runs its own checks and would send its own email
 replicaCount: 1
+revisionHistoryLimit: 3
 
-# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: docker
-  # This sets the pull policy for images.
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "iss-tracker"
+  repository: forgejo.pontus-homelab.space/python-apps/iss-tracker
+  # -- Defaults to Chart.appVersion when empty
+  tag: "latest"
+  # -- Pin by digest (sha256:...). Takes precedence over tag when set
+  digest: ""
+  # -- Always, since the tag is "latest" (IfNotPresent would keep running a cached old image)
+  pullPolicy: Always
 
-# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-imagePullSecrets: []
-# This is to override the chart name.
-nameOverride: ""
-fullnameOverride: ""
+# -- Pull secrets for the private registry. The secret must exist in the release namespace
+# forgejo-registry is copied into every namespace by the Kyverno policy sync-forgejo-registry-secret
+imagePullSecrets:
+  - name: forgejo-registry
 
-# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
-  # Specifies whether a service account should be created
-  create: false
-  # Automatically mount a ServiceAccount's API credentials?
-  automount: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
+  # -- ESO logs in to Vault with this service account (Vault role vault.role must allow it)
+  create: true
+  # -- Defaults to the fullname when empty
   name: ""
+  annotations: {}
+  # -- The app never talks to the Kubernetes API (ESO requests its own token)
+  automountServiceAccountToken: false
 
-# This is for setting Kubernetes Annotations to a Pod.
-# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+# ---------------------------------------------------------------------------
+# HashiCorp Vault Agent Injector
+# ---------------------------------------------------------------------------
+vault:
+  enabled: false
+  # -- Vault Kubernetes auth role. Access is scoped by the role's policy to secret/data/<namespace>/*
+  role: app
+  # -- KV v2 mount name
+  mount: secret
+  # -- Run the agent as a pre-populate-only init container (no sidecar). Use for Jobs or when secrets never change
+  prePopulateOnly: false
+  # -- Run the agent init container before other init containers
+  initFirst: false
+  # -- Secrets to inject. Each one becomes a file at /vault/secrets/<name>
+  #
+  # path:     relative paths are resolved to <mount>/data/<namespace>/<path>.
+  #           A path starting with "<mount>/" is used as is (it must include /data/ for KV v2).
+  #           Defaults to the secret's name.
+  # template: optional Vault Agent template to control the file format.
+  #
+  # secrets:
+  #   - name: config
+  #     path: config
+  #   - name: db
+  #     path: myapp/db
+  #     template: |
+  #       {{- with secret "secret/data/mynamespace/myapp/db" -}}
+  #       DB_USER={{ .Data.data.user }}
+  #       DB_PASSWORD={{ .Data.data.password }}
+  #       {{- end }}
+  secrets: []
+  # -- Extra vault.hashicorp.com/* annotations (override the generated ones), e.g.
+  # vault.hashicorp.com/agent-requests-cpu: 50m
+  # vault.hashicorp.com/agent-limits-cpu: 250m
+  # vault.hashicorp.com/agent-requests-mem: 64Mi
+  # vault.hashicorp.com/agent-limits-mem: 128Mi
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Container
+# ---------------------------------------------------------------------------
+# -- Port the app listens on. Set to null for workloads with no port
+containerPort: 8080
+
+command: []
+args: []
+
+# -- Environment variables as a simple map: NAME: value
+env:
+  LOG_LEVEL: info
+  APP_EMAIL__RECEIVER: pjirbratt@yahoo.com
+  APP_LOCATION__NAME: Stockholm
+  APP_LOCATION__LATITUDE: "59.3293"
+  APP_LOCATION__LONGITUDE: "18.0686"
+  APP_SCHEDULER__INTERVAL_SECONDS: "60"
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 48Mi
+  limits:
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+
+# -- Raw env entries for valueFrom (secretKeyRef, configMapKeyRef, fieldRef)
+envRaw: []
+#  - name: API_KEY
+#    valueFrom:
+#      secretKeyRef:
+#        name: my-secret
+#        key: api-key
+
+# -- envFrom sources (configMapRef / secretRef)
+envFrom: []
+
+
+startupProbe: {}
+
+lifecycle: {}
+terminationGracePeriodSeconds: null
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Extra volumes and mounts (e.g. an emptyDir at /tmp when readOnlyRootFilesystem is true)
+volumes: []
+#  - name: tmp
+#    emptyDir: {}
+volumeMounts: []
+#  - name: tmp
+#    mountPath: /tmp
+
+# ---------------------------------------------------------------------------
+# Pod metadata and scheduling
+# ---------------------------------------------------------------------------
+# -- Annotations on the Deployment
+deploymentAnnotations: {}
+# -- Annotations on the pod template (merged with the generated Vault annotations)
 podAnnotations: {}
-# This is for setting Kubernetes Labels to a Pod.
-# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 podLabels: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+strategy: {}
+#  type: RollingUpdate
+#  rollingUpdate:
+#    maxUnavailable: 0
+#    maxSurge: 1
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
 
-# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+# ---------------------------------------------------------------------------
+# Service, Ingress, scaling
+# ---------------------------------------------------------------------------
 service:
-  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  enabled: true
   type: ClusterIP
-  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 587
-
-
-# -- Expose the service via gateway-api HTTPRoute
-# Requires Gateway API resources and suitable controller installed within the cluster
-# (see: https://gateway-api.sigs.k8s.io/guides/)
-httpRoute:
-  # HTTPRoute enabled.
-  enabled: false
-  # HTTPRoute annotations.
+  port: 80
+  # -- Container port name or number
+  targetPort: http
+  nodePort: null
   annotations: {}
-  # Which Gateways this Route is attached to.
-  parentRefs:
-  - name: gateway
-    sectionName: http
-    # namespace: default
-  # Hostnames matching HTTP header.
-  hostnames:
-  - chart-example.local
-  # List of rules and filters applied.
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /headers
-  #   filters:
-  #   - type: RequestHeaderModifier
-  #     requestHeaderModifier:
-  #       set:
-  #       - name: My-Overwrite-Header
-  #         value: this-is-the-only-value
-  #       remove:
-  #       - User-Agent
-  # - matches:
-  #   - path:
-  #       type: PathPrefix
-  #       value: /echo
-  #     headers:
-  #     - name: version
-  #       value: v2
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  #  cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+  hosts: []
+  #  - host: myapp.pontus-homelab.space
+  #    paths:
+  #      - path: /
+  #        pathType: Prefix
+  tls: []
+  #  - secretName: myapp-tls
+  #    hosts:
+  #      - myapp.pontus-homelab.space
 
-# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-# livenessProbe:
-#   httpGet:
-#     path: /
-#     port: http
-# readinessProbe:
-#   httpGet:
-#     path: /
-#     port: http
-
-# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
   enabled: false
   minReplicas: 1
-  maxReplicas: 100
+  maxReplicas: 3
   targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null
 
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
 
-nodeSelector: {}
-
-tolerations: 
-  - key: "prefer-lightweight"
-    operator: "Equal"
-    value: "true"
-    effect: "PreferNoSchedule"
-
-affinity: 
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "kubernetes.io/arch"
-              operator: In
-              values:
-                - arm64
-
+# ---------------------------------------------------------------------------
+# External Secrets Operator: reads Vault secret/data/iss-tracker/config (property "password")
+# and creates the Secret iss-tracker-config, exposed to the pod as env var EMAIL_PASSWORD.
+# Env vars are read at pod start: after changing the password, run
+#   kubectl -n iss-tracker rollout restart deploy/iss-tracker
+# ---------------------------------------------------------------------------
+eso:
+  enabled: true
+  server: "http://vault.vault.svc.cluster.local:8200"
+  authMountPath: kubernetes
+  audiences: []
+  refreshInterval: 1h
+  secrets:
+    - name: config
+      path: config
+      envFrom: true
+      refreshInterval: 15m
+      type: Opaque
+      keys:
+        - secretKey: EMAIL_PASSWORD
+          property: EMAIL_PASSWORD
