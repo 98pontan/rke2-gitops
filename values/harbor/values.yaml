@@ -6,6 +6,7 @@
 #   harbor-secrets -> ExternalSecret from Vault secret/harbor/harbor (harbor-resources/)
 #   harbor-token   -> self-signed Certificate from cert-manager (harbor-resources/)
 #   harbor-tls     -> ingress certificate from letsencrypt-cloudflare
+#   harbor-oidc    -> Keycloak OIDC settings, ExternalSecret template (harbor-resources/)
 
 # Pin every Harbor pod to the control-plane node (pontus-server-3), which has
 # the bigger disk. The longhorn-harbor volumes keep their only replica there,
@@ -79,6 +80,13 @@ portal:
 
 core:
   affinity: *controlPlaneAffinity
+  # Keycloak OIDC login, built by ExternalSecret harbor-oidc (harbor-resources/)
+  extraEnvVars:
+    - name: CONFIG_OVERWRITE_JSON
+      valueFrom:
+        secretKeyRef:
+          name: harbor-oidc
+          key: CONFIG_OVERWRITE_JSON
   # key "secret" (16 chars), used between Harbor components
   existingSecret: harbor-secrets
   # tls.key / tls.crt used to sign registry tokens
