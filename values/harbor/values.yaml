@@ -1,0 +1,125 @@
+# values.yaml for the Harbor Helm chart (https://helm.goharbor.io, chart 1.19.4)
+#
+# Every secret the chart would otherwise generate with randAlphaNum/genCA/htpasswd
+# comes from an existing Secret instead. ArgoCD renders with `helm template`, so
+# generated values change on every render: endless OutOfSync and pod restarts.
+#   harbor-secrets -> ExternalSecret from Vault secret/harbor/harbor (harbor-resources/)
+#   harbor-token   -> self-signed Certificate from cert-manager (harbor-resources/)
+#   harbor-tls     -> ingress certificate from letsencrypt-cloudflare
+
+# Pin every Harbor pod to the control-plane node (pontus-server-3), which has
+# the bigger disk. The longhorn-harbor volumes keep their only replica there,
+# so running the pods on the same node keeps disk access local.
+# The chart has no global affinity, so each component references this anchor.
+# The node has no taints, so no tolerations are needed.
+x-control-plane-affinity: &controlPlaneAffinity
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: In
+              values:
+                - "true"
+
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    # "auto" would call genCA on every render; let cert-manager create harbor-tls
+    certSource: secret
+    secret:
+      secretName: harbor-tls
+  ingress:
+    hosts:
+      core: harbor.pontus-homelab.space
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      # No limit, image layers can be large
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+
+externalURL: https://harbor.pontus-homelab.space
+
+persistence:
+  enabled: true
+  # Keep PVCs if the chart is deleted
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      storageClass: longhorn-harbor
+      size: 50Gi
+    jobservice:
+      jobLog:
+        storageClass: longhorn-harbor
+        size: 1Gi
+    database:
+      storageClass: longhorn-harbor
+      size: 2Gi
+    redis:
+      storageClass: longhorn-harbor
+      size: 1Gi
+    trivy:
+      storageClass: longhorn-harbor
+      size: 5Gi
+  imageChartStorage:
+    type: filesystem
+
+# Initial admin password (Vault property HARBOR_ADMIN_PASSWORD).
+# Only used on first start, change it in the UI afterwards.
+existingSecretAdminPassword: harbor-secrets
+existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+
+# Encryption key, key "secretKey" (exactly 16 chars)
+existingSecretSecretKey: harbor-secrets
+
+portal:
+  affinity: *controlPlaneAffinity
+
+core:
+  affinity: *controlPlaneAffinity
+  # key "secret" (16 chars), used between Harbor components
+  existingSecret: harbor-secrets
+  # tls.key / tls.crt used to sign registry tokens
+  secretName: harbor-token
+  # key CSRF_KEY (exactly 32 chars)
+  existingXsrfSecret: harbor-secrets
+  existingXsrfSecretKey: CSRF_KEY
+
+jobservice:
+  affinity: *controlPlaneAffinity
+  # key JOBSERVICE_SECRET (16 chars)
+  existingSecret: harbor-secrets
+  existingSecretKey: JOBSERVICE_SECRET
+
+registry:
+  affinity: *controlPlaneAffinity
+  # key REGISTRY_HTTP_SECRET (16 chars)
+  existingSecret: harbor-secrets
+  existingSecretKey: REGISTRY_HTTP_SECRET
+  credentials:
+    username: harbor_registry_user
+    # keys REGISTRY_PASSWD and REGISTRY_HTPASSWD (bcrypt line for harbor_registry_user)
+    existingSecret: harbor-secrets
+
+trivy:
+  enabled: true
+  affinity: *controlPlaneAffinity
+
+database:
+  type: internal
+  internal:
+    affinity: *controlPlaneAffinity
+
+redis:
+  type: internal
+  internal:
+    affinity: *controlPlaneAffinity
+
+metrics:
+  enabled: false
+
+# Only deployed when metrics.enabled is true
+exporter:
+  affinity: *controlPlaneAffinity

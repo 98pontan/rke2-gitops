@@ -1,0 +1,26 @@
+# Key pair Harbor core uses to sign registry tokens (values: core.secretName).
+# Self-signed and long-lived: core reads it at startup, so restart harbor-core
+# if it is ever reissued.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: harbor-selfsigned
+  namespace: harbor
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harbor-token
+  namespace: harbor
+spec:
+  secretName: harbor-token
+  commonName: harbor-token-ca
+  duration: 87600h # 10 years
+  privateKey:
+    algorithm: RSA
+    size: 4096
+  issuerRef:
+    name: harbor-selfsigned
+    kind: Issuer

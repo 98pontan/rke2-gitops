@@ -1,0 +1,23 @@
+# Longhorn volumes for Harbor: one replica, only on Longhorn nodes tagged "harbor"
+# (pontus-server-3, the node with the big disk). Tag the node once with:
+#
+#   kubectl -n longhorn-system patch nodes.longhorn.io pontus-server-3 \
+#     --type merge -p '{"spec":{"tags":["harbor"]}}'
+#
+# (or Longhorn UI -> Node -> Edit node and disks -> Node Tags)
+# A single replica means no redundancy: if that disk dies, the registry data is gone.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-harbor
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  numberOfReplicas: "1"
+  nodeSelector: "harbor"
+  # Keep the replica on the same node as the pod (pods are pinned there by affinity)
+  dataLocality: "best-effort"
+  staleReplicaTimeout: "30"
+  fsType: "ext4"
