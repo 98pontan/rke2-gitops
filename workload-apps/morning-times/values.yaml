@@ -1,0 +1,253 @@
+# The Morning Times: FastAPI app + bundled PostgreSQL. Secrets come from Vault via ESO.
+# Deployed by the workload-apps ApplicationSet as release "morning-times" in namespace "morning-times".
+
+nameOverride: "morning-times"
+# Resource names: Deployment/Service/SA "morning-times", Secret "morning-times-config",
+# Postgres StatefulSet/Service "morning-times-postgres"
+fullnameOverride: "morning-times"
+
+# -- Must stay 1: the scheduler runs inside the app, a second replica would send duplicate emails
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# -- Recreate (not RollingUpdate) so old and new pod never run their schedulers at the same time
+strategy:
+  type: Recreate
+
+image:
+  repository: forgejo.pontus-homelab.space/python-apps/morning-times
+  tag: "latest"
+  digest: ""
+  # -- Always, since the tag is "latest"
+  pullPolicy: Always
+
+# forgejo-registry is copied into every namespace by the Kyverno policy sync-forgejo-registry-secret
+imagePullSecrets:
+  - name: forgejo-registry
+
+serviceAccount:
+  # -- ESO logs in to Vault with this service account (Vault role vault.role must allow it)
+  create: true
+  name: ""
+  annotations: {}
+  # -- The app never talks to the Kubernetes API (ESO requests its own token)
+  automountServiceAccountToken: false
+
+# Secrets come from ESO, not the Vault agent injector
+vault:
+  enabled: false
+  role: app
+  mount: secret
+  prePopulateOnly: false
+  initFirst: false
+  secrets: []
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# App container
+# ---------------------------------------------------------------------------
+containerPort: 8080
+
+command: []
+args: []
+
+# -- Settings from config.yaml in the image can be overridden with APP_<SECTION>__<KEY>
+env:
+  LOG_LEVEL: info
+  # yfinance writes a small cache; the root filesystem is read-only, so point it at /tmp
+  HOME: /tmp
+  XDG_CACHE_HOME: /tmp/cache
+  APP_AI__PROVIDER: gemini
+  APP_SCHEDULER__BRIEF_TIME: "06:30"
+
+# -- Ordered on purpose: POSTGRES_PASSWORD must be defined before DATABASE_URL uses $(POSTGRES_PASSWORD).
+# Use a URL-safe password (e.g. `openssl rand -hex 24`), it is inserted into the URL as is.
+envRaw:
+  - name: POSTGRES_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: morning-times-config
+        key: POSTGRES_PASSWORD
+  - name: DATABASE_URL
+    value: "postgresql+psycopg://morning:$(POSTGRES_PASSWORD)@morning-times-postgres:5432/morning_times"
+
+# GEMINI_API_KEY and EMAIL_PASSWORD (and anything else in the Vault secret) come in via the ESO envFrom below
+envFrom: []
+
+# -- Wait for Postgres before the app runs its migrations
+initContainers:
+  - name: wait-for-postgres
+    image: "{{ .Values.postgres.image }}"
+    command: ["sh", "-c", "until pg_isready -h morning-times-postgres -p 5432 -q; do echo waiting for postgres; sleep 2; done"]
+    securityContext:
+      runAsUser: 70
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    resources:
+      requests:
+        cpu: 5m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 768Mi
+
+# Startup runs Alembic migrations and seeds an empty database
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 5
+  failureThreshold: 36
+# /healthz also checks the database; be patient so a Postgres restart doesn't kill the app
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 30
+  failureThreshold: 5
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+
+lifecycle: {}
+terminationGracePeriodSeconds: 30
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+volumes:
+  - name: tmp
+    emptyDir:
+      sizeLimit: 256Mi
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+
+deploymentAnnotations: {}
+podAnnotations: {}
+podLabels: {}
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+# ---------------------------------------------------------------------------
+# PostgreSQL (single instance, data on the default storage class = Longhorn, 2 replicas)
+# ---------------------------------------------------------------------------
+postgres:
+  enabled: true
+  image: "docker.io/library/postgres:17-alpine"
+  user: morning
+  database: morning_times
+  # -- Secret/key holding the password. Empty name = the ESO secret "<fullname>-config"
+  passwordSecret:
+    name: ""
+    key: POSTGRES_PASSWORD
+  storage: 5Gi
+  # -- Empty = cluster default (Longhorn)
+  storageClassName: ""
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# Service, Ingress, scaling
+# ---------------------------------------------------------------------------
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: http
+  nodePort: null
+  annotations: {}
+
+# -- Off for now: no frontend yet, and the API has no login. See platform-apps/TODO.txt (Tailscale)
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts: []
+  tls: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null
+
+# ---------------------------------------------------------------------------
+# Vertical Pod Autoscaler: learns actual CPU/memory use and adjusts the *requests* over time.
+# The `resources` above are the starting point; limits are never changed by VPA, so keep
+# maxAllowed memory below the container's memory limit.
+# Needs platform-apps/vertical-pod-autoscaler.yaml and the VerticalPodAutoscaler kind in the apps AppProject.
+# Inspect recommendations with: kubectl -n morning-times describe vpa
+# ---------------------------------------------------------------------------
+vpa:
+  enabled: true
+  # -- Recreate: evicts the pod to apply new requests (brief restart; works on any Kubernetes version).
+  # InPlaceOrRecreate: resizes the running pod without a restart when the cluster supports in-place
+  # pod resize (Kubernetes 1.33+), else falls back to Recreate.
+  # Initial: only applies at pod creation (e.g. on deploys). "Off": recommendations only.
+  updateMode: Recreate
+  app:
+    updateMode: ""   # empty = vpa.updateMode
+    minAllowed: {cpu: 10m, memory: 128Mi}
+    maxAllowed: {cpu: 500m, memory: 640Mi}   # app memory limit is 768Mi
+  postgres:
+    updateMode: ""
+    minAllowed: {cpu: 10m, memory: 64Mi}
+    maxAllowed: {cpu: 500m, memory: 448Mi}   # postgres memory limit is 512Mi
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
+
+# ---------------------------------------------------------------------------
+# External Secrets Operator: reads Vault secret/data/morning-times/config and creates the
+# Secret morning-times-config. All its keys become env vars in the app pod:
+#   GEMINI_API_KEY      Google AI Studio key
+#   EMAIL_PASSWORD      Gmail app password
+#   POSTGRES_PASSWORD   database password (also used by the Postgres StatefulSet)
+# Create it with:
+#   vault kv put -mount=secret morning-times/config GEMINI_API_KEY=... EMAIL_PASSWORD=... POSTGRES_PASSWORD=$(openssl rand -hex 24)
+# Env vars are read at pod start: after changing a value, restart the app pod.
+# Do NOT change POSTGRES_PASSWORD after the first start: Postgres only reads it when initialising its data.
+# ---------------------------------------------------------------------------
+eso:
+  enabled: true
+  server: "http://vault.vault.svc.cluster.local:8200"
+  authMountPath: kubernetes
+  audiences: []
+  refreshInterval: 1h
+  secrets:
+    - name: config
+      path: config
+      envFrom: true
+      refreshInterval: 15m
+      type: Opaque

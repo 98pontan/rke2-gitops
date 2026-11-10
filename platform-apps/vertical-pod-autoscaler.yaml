@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vertical-pod-autoscaler
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  sources:
+    # Official chart from the Kubernetes autoscaler project (recommender, updater, admission controller + CRDs).
+    # Recommendations are based on metrics-server, which RKE2 ships by default.
+    - repoURL: https://kubernetes.github.io/autoscaler
+      chart: vertical-pod-autoscaler
+      targetRevision: 0.16.0 # VPA 1.8.1
+      helm:
+        valueFiles:
+          - $values/values/vertical-pod-autoscaler/values.yaml
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vertical-pod-autoscaler
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # The VPA CRDs are too large for client-side apply's last-applied annotation
+      - ServerSideApply=true

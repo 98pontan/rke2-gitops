@@ -1,0 +1,25 @@
+TODO: Remote access without exposing the cluster
+=================================================
+
+Goal: reach cluster services from my phone and let friends join a Minecraft
+server, without opening router ports or exposing the cluster to the internet.
+
+1. Tailscale Kubernetes operator
+   - Add platform-apps/tailscale-operator.yaml (Argo Application, pinned chart version)
+     + values/tailscale-operator/values.yaml
+   - OAuth client credentials from Vault via ESO (not in git)
+   - Expose a Service privately with the annotation tailscale.com/expose: "true"
+     (or loadBalancerClass: tailscale) -> <name>.<tailnet>.ts.net
+   - Optional: subnet router for the home network
+   - Alternative if I want to self-host the control server: Headscale
+
+2. Minecraft with friends
+   - Share only the Minecraft node with friends via Tailscale node sharing
+     (TCP 25565 Java / UDP 19132 Bedrock)
+   - Fallbacks: playit.gg agent (public address, home IP hidden; enable whitelist)
+     or a small VPS relay over WireGuard
+   - Note: the free Cloudflare tunnel does not proxy raw TCP/UDP for visitors
+
+3. Cloudflare tunnel hardening
+   - Put Cloudflare Access (Zero Trust) in front of every public hostname
+   - Pin targetRevision in platform-apps/cloudflare-tunnel.yaml (currently "*")

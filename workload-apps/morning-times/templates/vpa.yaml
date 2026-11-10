@@ -1,0 +1,46 @@
+{{- /*
+VerticalPodAutoscalers for the app and the bundled Postgres. Requires the VPA components
+(platform-apps/vertical-pod-autoscaler.yaml) and autoscaling.k8s.io/VerticalPodAutoscaler
+in the "apps" AppProject's namespaceResourceWhitelist.
+*/ -}}
+{{- if .Values.vpa.enabled }}
+{{- $targets := list (dict "name" (include "app.fullname" .) "kind" "Deployment" "container" .Chart.Name "cfg" .Values.vpa.app) }}
+{{- if .Values.postgres.enabled }}
+{{- $targets = append $targets (dict "name" (printf "%s-postgres" (include "app.fullname" .)) "kind" "StatefulSet" "container" "postgres" "cfg" .Values.vpa.postgres) }}
+{{- end }}
+{{- range $targets }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "app.labels" $ | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: {{ .kind }}
+    name: {{ .name }}
+  updatePolicy:
+    updateMode: {{ .cfg.updateMode | default $.Values.vpa.updateMode | quote }}
+    # Single replica: allow the updater to evict it anyway (the global default requires 2)
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: {{ .container | quote }}
+        controlledResources: ["cpu", "memory"]
+        # Only requests are tuned; limits stay as set in values.yaml (a hard ceiling against leaks)
+        controlledValues: RequestsOnly
+        {{- with .cfg.minAllowed }}
+        minAllowed:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .cfg.maxAllowed }}
+        maxAllowed:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      # Leave other containers (e.g. the wait-for-postgres init container) alone
+      - containerName: "*"
+        mode: "Off"
+{{- end }}
+{{- end }}
