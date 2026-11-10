@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  namespace: argocd
+spec:
+  project: infra
+  sources:
+    - repoURL: https://helm.goharbor.io
+      chart: harbor
+      targetRevision: 1.19.4 # Harbor v2.15.4
+      helm:
+        valueFiles:
+          - $values/values/harbor/values.yaml
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      ref: values
+    # Supporting resources: Vault-backed secrets (ESO), the token-signing cert
+    # (cert-manager) and the single-replica Longhorn StorageClass.
+    # The secrets are needed because ArgoCD renders with `helm template`, where the
+    # chart's `lookup` returns nothing, so it would regenerate them on every sync.
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      path: harbor-resources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
