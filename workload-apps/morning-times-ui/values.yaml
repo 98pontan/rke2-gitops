@@ -1,0 +1,179 @@
+# The Morning Times UI: static React build served by unprivileged nginx (uid 101, port 8080).
+# nginx proxies /api to the backend, so the browser only talks to this service.
+# Deployed by the workload-apps ApplicationSet as release "morning-times-ui" in namespace "morning-times-ui".
+
+nameOverride: "morning-times-ui"
+fullnameOverride: "morning-times-ui"
+
+# Stateless: more replicas are safe (unlike the backend)
+replicaCount: 1
+revisionHistoryLimit: 3
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+image:
+  repository: forgejo.pontus-homelab.space/python-apps/morning-times-ui
+  tag: "latest"
+  digest: ""
+  # -- Always, since the tag is "latest"
+  pullPolicy: Always
+
+# forgejo-registry is copied into every namespace by the Kyverno policy sync-forgejo-registry-secret
+imagePullSecrets:
+  - name: forgejo-registry
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  # -- nginx never talks to the Kubernetes API
+  automountServiceAccountToken: false
+
+# No secrets: the UI has none (API keys and passwords live in the backend)
+vault:
+  enabled: false
+  role: app
+  mount: secret
+  prePopulateOnly: false
+  initFirst: false
+  secrets: []
+  annotations: {}
+
+eso:
+  enabled: false
+  secrets: []
+
+# ---------------------------------------------------------------------------
+# Container
+# ---------------------------------------------------------------------------
+containerPort: 8080
+
+command: []
+args: []
+
+env:
+  # The backend lives in its own namespace (one namespace per workload-apps folder)
+  BACKEND_URL: "http://morning-times.morning-times.svc.cluster.local:80"
+
+envRaw: []
+envFrom: []
+initContainers: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+
+# /healthz is served by nginx itself (it does not depend on the backend)
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 30
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+startupProbe: {}
+
+lifecycle: {}
+terminationGracePeriodSeconds: 30
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 101
+  runAsGroup: 101
+  fsGroup: 101
+  seccompProfile:
+    type: RuntimeDefault
+
+# The read-only root filesystem needs two writable paths:
+#   /etc/nginx/conf.d  nginx renders the BACKEND_URL template here at start
+#   /tmp               pid file and proxy/client temp files (nginx-unprivileged keeps them in /tmp)
+volumes:
+  - name: nginx-conf
+    emptyDir:
+      sizeLimit: 1Mi
+  - name: tmp
+    emptyDir:
+      sizeLimit: 64Mi
+volumeMounts:
+  - name: nginx-conf
+    mountPath: /etc/nginx/conf.d
+  - name: tmp
+    mountPath: /tmp
+
+deploymentAnnotations: {}
+podAnnotations: {}
+podLabels: {}
+priorityClassName: ""
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+# ---------------------------------------------------------------------------
+# Service, Ingress, scaling
+# ---------------------------------------------------------------------------
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: http
+  nodePort: null
+  annotations: {}
+
+# -- https://morning-times.pontus-homelab.space with a Let's Encrypt certificate (DNS-01 via Cloudflare),
+# like the other homelab services. Private on purpose (the API has no login):
+#   - Cloudflare DNS record: A morning-times -> 192.168.50.53, "DNS only" (grey cloud), so it only
+#     resolves to a home-network address
+#   - NOT routed through the Cloudflare tunnel (cloudflared), which is the public path
+#   - reachable at home, and away from home via the Tailscale subnet router (tailscale-operator/connector.yaml)
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+  hosts:
+    - host: morning-times.pontus-homelab.space
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: morning-times-ui-tls
+      hosts:
+        - morning-times.pontus-homelab.space
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
+
+# ---------------------------------------------------------------------------
+# Vertical Pod Autoscaler (requests only; see the morning-times chart for details)
+# ---------------------------------------------------------------------------
+vpa:
+  enabled: true
+  updateMode: Recreate
+  minAllowed: {cpu: 5m, memory: 16Mi}
+  maxAllowed: {cpu: 200m, memory: 96Mi}   # memory limit is 128Mi

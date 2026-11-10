@@ -1,0 +1,37 @@
+{{- /*
+VerticalPodAutoscaler for the UI. Requires the VPA components (platform-apps/vertical-pod-autoscaler.yaml)
+and autoscaling.k8s.io/VerticalPodAutoscaler in the "apps" AppProject's namespaceResourceWhitelist.
+*/ -}}
+{{- if .Values.vpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "app.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "app.fullname" . }}
+  updatePolicy:
+    updateMode: {{ .Values.vpa.updateMode | quote }}
+    # Single replica: allow the updater to evict it anyway (the global default requires 2)
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: {{ .Chart.Name | quote }}
+        controlledResources: ["cpu", "memory"]
+        # Only requests are tuned; limits stay as set in values.yaml
+        controlledValues: RequestsOnly
+        {{- with .Values.vpa.minAllowed }}
+        minAllowed:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.vpa.maxAllowed }}
+        maxAllowed:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      - containerName: "*"
+        mode: "Off"
+{{- end }}

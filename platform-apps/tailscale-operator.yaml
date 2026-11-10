@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tailscale-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  sources:
+    # Tailscale Kubernetes operator: exposes cluster Services to the tailnet (private, no open ports)
+    - repoURL: https://pkgs.tailscale.com/helmcharts
+      chart: tailscale-operator
+      targetRevision: 1.104.4
+      helm:
+        valueFiles:
+          - $values/values/tailscale-operator/values.yaml
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      ref: values
+    # SecretStore + ExternalSecret that create the operator-oauth Secret from Vault
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      path: tailscale-operator/
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tailscale
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # The operator CRDs are too large for client-side apply's last-applied annotation
+      - ServerSideApply=true
