@@ -1,0 +1,22 @@
+# Tailscale operator (chart tailscale-operator 1.104.4). Defaults are fine; only what differs is set here.
+
+# OAuth credentials are NOT set here: with oauth.clientId empty, the chart reads the pre-created
+# Secret "operator-oauth" (keys client_id, client_secret), which ESO creates from Vault
+# (see tailscale-operator/externalsecret.yaml).
+oauth: {}
+
+operatorConfig:
+  # The operator joins the tailnet as this machine, tagged tag:k8s-operator
+  hostname: "k8s-operator"
+  defaultTags:
+    - "tag:k8s-operator"
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# Proxies created for exposed Services join the tailnet tagged tag:k8s
+proxyConfig:
+  defaultTags: "tag:k8s"

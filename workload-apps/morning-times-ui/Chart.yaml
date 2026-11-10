@@ -1,0 +1,7 @@
+apiVersion: v2
+name: app
+description: The Morning Times UI - React frontend served by unprivileged nginx, proxying /api to the morning-times backend
+type: application
+version: 0.1.0
+# Used as the default image tag when image.tag is not set.
+appVersion: "0.1.0"

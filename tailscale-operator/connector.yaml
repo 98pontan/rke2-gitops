@@ -1,0 +1,28 @@
+# Subnet router: makes the cluster nodes reachable from the tailnet, so the same
+# https://*.pontus-homelab.space names (Cloudflare DNS -> 192.168.50.53, Let's Encrypt certs)
+# work away from home exactly like on the home network.
+#
+# Only the three node IPs are advertised, not the whole 192.168.50.0/24: the router and
+# other home devices stay invisible to the tailnet. ingress-nginx answers on the nodes
+# (all hostnames point at 192.168.50.53), and the Kubernetes API is on :6443.
+# These addresses must stay fixed (DHCP reservations).
+#
+# Tailnet policy needed (see values/tailscale-operator/README.md): autoApprovers for these
+# routes, and a grant limiting which ports tailnet devices may use on them.
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: homelab
+  annotations:
+    # The Connector CRD is installed by the chart in the same sync
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  hostname: homelab-subnet-router
+  tags:
+    - "tag:k8s"
+  subnetRouter:
+    advertiseRoutes:
+      - "192.168.50.53/32"   # pontus-server-3 (ingress for *.pontus-homelab.space)
+      - "192.168.50.173/32"  # pontus-server-1
+      - "192.168.50.219/32"  # pontus-server-2

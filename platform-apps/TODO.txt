@@ -4,13 +4,13 @@ TODO: Remote access without exposing the cluster
 Goal: reach cluster services from my phone and let friends join a Minecraft
 server, without opening router ports or exposing the cluster to the internet.
 
-1. Tailscale Kubernetes operator
-   - Add platform-apps/tailscale-operator.yaml (Argo Application, pinned chart version)
-     + values/tailscale-operator/values.yaml
-   - OAuth client credentials from Vault via ESO (not in git)
-   - Expose a Service privately with the annotation tailscale.com/expose: "true"
-     (or loadBalancerClass: tailscale) -> <name>.<tailnet>.ts.net
-   - Optional: subnet router for the home network
+1. Tailscale Kubernetes operator  [DONE: platform-apps/tailscale-operator.yaml]
+   - Chart pinned to 1.104.4, values in values/tailscale-operator/values.yaml
+   - OAuth credentials from Vault via ESO (tailscale-operator/externalsecret.yaml)
+   - Subnet router (tailscale-operator/connector.yaml) for the three node IPs, so
+     https://*.pontus-homelab.space (Cloudflare DNS + Let's Encrypt) works away from home
+   - Tailnet policy (tags, autoApprovers, grants): values/tailscale-operator/README.md
+   - morning-times-ui: https://morning-times.pontus-homelab.space (Ingress + cert-manager)
    - Alternative if I want to self-host the control server: Headscale
 
 2. Minecraft with friends
