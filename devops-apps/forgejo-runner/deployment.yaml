@@ -52,7 +52,7 @@ spec:
 
         # Fixes socket permissions as soon as dockerd creates it
         - name: socket-permission-fixer
-          image: busybox:1.36
+          image: busybox:1.38
           command:
             - sh
             - -c
