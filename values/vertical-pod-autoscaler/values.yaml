@@ -19,3 +19,20 @@ admissionController:
       memory: 64Mi
     limits:
       memory: 256Mi
+
+# The chart has no ServiceMonitor option. Scrape the "prometheus" port that the
+# recommender (8942), updater (8943) and admission controller (8944) all expose.
+extraObjects:
+  - apiVersion: monitoring.coreos.com/v1
+    kind: PodMonitor
+    metadata:
+      name: vertical-pod-autoscaler
+      labels:
+        release: prometheus-stack
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: vertical-pod-autoscaler
+      podMetricsEndpoints:
+        - port: prometheus
+          path: /metrics

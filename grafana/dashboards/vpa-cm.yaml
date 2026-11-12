@@ -1,0 +1,1031 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-vpa
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Platform"
+data:
+  vpa.json: |
+    {
+      "uid": "vpa-overview",
+      "title": "Vertical Pod Autoscaler",
+      "tags": [
+        "vpa",
+        "platform"
+      ],
+      "editable": true,
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "1m",
+      "timezone": "browser",
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "graphTooltip": 1,
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "label": "Data source",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {},
+            "hide": 0
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${datasource}"
+            },
+            "query": {
+              "query": "label_values(kube_customresource_vpa_recommendation_target, namespace)",
+              "refId": "namespace"
+            },
+            "definition": "label_values(kube_customresource_vpa_recommendation_target, namespace)",
+            "refresh": 2,
+            "sort": 1,
+            "includeAll": false,
+            "multi": false,
+            "current": {},
+            "hide": 0
+          },
+          {
+            "name": "vpa",
+            "label": "VPA",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${datasource}"
+            },
+            "query": {
+              "query": "label_values(kube_customresource_vpa_recommendation_target{namespace=\"$namespace\"}, verticalpodautoscaler)",
+              "refId": "vpa"
+            },
+            "definition": "label_values(kube_customresource_vpa_recommendation_target{namespace=\"$namespace\"}, verticalpodautoscaler)",
+            "refresh": 2,
+            "sort": 1,
+            "includeAll": false,
+            "multi": false,
+            "current": {},
+            "hide": 0
+          },
+          {
+            "name": "target",
+            "label": "Workload",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${datasource}"
+            },
+            "query": {
+              "query": "label_values(kube_customresource_vpa_recommendation_target{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\"}, target_name)",
+              "refId": "target"
+            },
+            "definition": "label_values(kube_customresource_vpa_recommendation_target{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\"}, target_name)",
+            "refresh": 2,
+            "sort": 1,
+            "includeAll": false,
+            "multi": false,
+            "current": {},
+            "hide": 0
+          }
+        ]
+      },
+      "annotations": {
+        "list": []
+      },
+      "panels": [
+        {
+          "type": "row",
+          "title": "All VPAs",
+          "id": 1,
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "type": "stat",
+          "title": "VPA objects",
+          "description": "",
+          "id": 2,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "count(count by (namespace, verticalpodautoscaler) (kube_customresource_vpa_recommendation_target))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto",
+            "justifyMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Pods evicted by updater (24h)",
+          "description": "",
+          "id": 3,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 6,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(increase(vpa_updater_evicted_pods_total[24h]))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto",
+            "justifyMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Components up",
+          "description": "Recommender, updater and admission controller",
+          "id": 4,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(up{namespace=\"vertical-pod-autoscaler\"})",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "textMode": "auto",
+            "justifyMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Recommender up",
+          "description": "",
+          "id": 5,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 18,
+            "y": 1,
+            "w": 6,
+            "h": 4
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "max(up{namespace=\"vertical-pod-autoscaler\", pod=~\".*recommender.*\"})",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "auto",
+            "justifyMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "table",
+          "title": "Recommendations (target)",
+          "id": 6,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 5,
+            "w": 24,
+            "h": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "refId": "A",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "expr": "max by (namespace, verticalpodautoscaler, target_name, container) (kube_customresource_vpa_recommendation_target{resource=\"cpu\"})"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "refId": "B",
+              "instant": true,
+              "range": false,
+              "format": "table",
+              "expr": "max by (namespace, verticalpodautoscaler, target_name, container) (kube_customresource_vpa_recommendation_target{resource=\"memory\"})"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "job": true,
+                  "instance": true,
+                  "endpoint": true,
+                  "service": true,
+                  "pod": true,
+                  "unit": true,
+                  "resource": true,
+                  "customresource_group": true,
+                  "customresource_kind": true,
+                  "customresource_version": true,
+                  "target_kind": true
+                },
+                "renameByName": {
+                  "Value #A": "CPU target",
+                  "Value #B": "Memory target",
+                  "verticalpodautoscaler": "VPA",
+                  "target_name": "Workload"
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CPU target"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "cores"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Memory target"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true
+          }
+        },
+        {
+          "type": "row",
+          "title": "Selected VPA: $namespace / $vpa",
+          "id": 8,
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 13,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU: recommendation vs actual",
+          "description": "",
+          "id": 9,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 14,
+            "w": 12,
+            "h": 9
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "kube_customresource_vpa_recommendation_lowerbound{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\", resource=\"cpu\"}",
+              "legendFormat": "{{container}} lower bound",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "kube_customresource_vpa_recommendation_target{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\", resource=\"cpu\"}",
+              "legendFormat": "{{container}} target",
+              "refId": "B",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "kube_customresource_vpa_recommendation_upperbound{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\", resource=\"cpu\"}",
+              "legendFormat": "{{container}} upper bound",
+              "refId": "C",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "max by (container) (kube_pod_container_resource_requests{namespace=\"$namespace\", pod=~\"$target-.*\", resource=\"cpu\"})",
+              "legendFormat": "{{container}} request",
+              "refId": "D",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "max by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$target-.*\", container!=\"\"}[5m]))",
+              "legendFormat": "{{container}} usage (max pod)",
+              "refId": "E",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Memory: recommendation vs actual",
+          "description": "",
+          "id": 10,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 14,
+            "w": 12,
+            "h": 9
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "kube_customresource_vpa_recommendation_lowerbound{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\", resource=\"memory\"}",
+              "legendFormat": "{{container}} lower bound",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "kube_customresource_vpa_recommendation_target{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\", resource=\"memory\"}",
+              "legendFormat": "{{container}} target",
+              "refId": "B",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "kube_customresource_vpa_recommendation_upperbound{namespace=\"$namespace\", verticalpodautoscaler=\"$vpa\", resource=\"memory\"}",
+              "legendFormat": "{{container}} upper bound",
+              "refId": "C",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "max by (container) (kube_pod_container_resource_requests{namespace=\"$namespace\", pod=~\"$target-.*\", resource=\"memory\"})",
+              "legendFormat": "{{container}} request",
+              "refId": "D",
+              "instant": false,
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "max by (container) (container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$target-.*\", container!=\"\"})",
+              "legendFormat": "{{container}} usage (max pod)",
+              "refId": "E",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "row",
+          "title": "VPA components",
+          "id": 11,
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 23,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "Updater evictions",
+          "description": "",
+          "id": 12,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 24,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(increase(vpa_updater_evicted_pods_total[1h]))",
+              "legendFormat": "evicted / h",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Admission controller requests",
+          "description": "",
+          "id": 13,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 24,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(rate(vpa_admission_controller_admission_latency_seconds_count[5m]))",
+              "legendFormat": "requests",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "row",
+          "title": "Pods",
+          "id": 14,
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 32,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU usage",
+          "description": "",
+          "id": 15,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 33,
+            "w": 8,
+            "h": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"vertical-pod-autoscaler\", container!=\"\"}[5m]))",
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Memory working set",
+          "description": "",
+          "id": 16,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 8,
+            "y": 33,
+            "w": 8,
+            "h": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"vertical-pod-autoscaler\", container!=\"\"})",
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Container restarts (1h)",
+          "description": "",
+          "id": 17,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "x": 16,
+            "y": 33,
+            "w": 8,
+            "h": 8
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"vertical-pod-autoscaler\"}[1h]))",
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "instant": false,
+              "range": true
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          }
+        }
+      ]
+    }

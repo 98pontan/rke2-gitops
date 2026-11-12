@@ -19,6 +19,10 @@ server:
         tls_disable     = 1
         address         = "[::]:8200"
         cluster_address = "[::]:8201"
+        # Lets Prometheus scrape /v1/sys/metrics without a Vault token
+        telemetry {
+          unauthenticated_metrics_access = "true"
+        }
         # If you terminate TLS at Vault instead of at the ingress,
         # replace tls_disable with tls_cert_file / tls_key_file.
       }
@@ -28,6 +32,12 @@ server:
       }
 
       service_registration "kubernetes" {}
+
+      telemetry {
+        # Keep gauges such as token/lease counts (emitted every 10m) between scrapes
+        prometheus_retention_time = "12h"
+        disable_hostname          = true
+      }
 
   dataStorage:
     enabled: true
@@ -55,3 +65,11 @@ server:
 ui:
   enabled: true
   serviceType: "ClusterIP"
+
+# Prometheus scrapes the active Vault pod via a ServiceMonitor.
+# The release label is what kube-prometheus-stack (release "prometheus-stack") selects on.
+serverTelemetry:
+  serviceMonitor:
+    enabled: true
+    selectors:
+      release: prometheus-stack

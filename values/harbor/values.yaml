@@ -126,7 +126,11 @@ redis:
     affinity: *controlPlaneAffinity
 
 metrics:
-  enabled: false
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: prometheus-stack
 
 # Only deployed when metrics.enabled is true
 exporter:

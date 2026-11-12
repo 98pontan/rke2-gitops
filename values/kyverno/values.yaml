@@ -8,6 +8,12 @@ crds:
       clusterpolicies: true
       policies: true
 
+# ServiceMonitor settings shared by all four controllers
+x-service-monitor: &serviceMonitor
+  enabled: true
+  additionalLabels:
+    release: prometheus-stack
+
 # Reusable worker-node affinity
 x-worker-affinity: &workerAffinity
   nodeAffinity:
@@ -21,6 +27,7 @@ x-worker-affinity: &workerAffinity
 
 admissionController:
   affinity: *workerAffinity
+  serviceMonitor: *serviceMonitor
   resources:
     requests:
       cpu: 100m
@@ -30,6 +37,7 @@ admissionController:
 
 backgroundController:
   affinity: *workerAffinity
+  serviceMonitor: *serviceMonitor
   resources:
     requests:
       cpu: 50m
@@ -39,6 +47,7 @@ backgroundController:
 
 reportsController:
   affinity: *workerAffinity
+  serviceMonitor: *serviceMonitor
   resources:
     requests:
       cpu: 50m
@@ -48,6 +57,7 @@ reportsController:
 
 cleanupController:
   affinity: *workerAffinity
+  serviceMonitor: *serviceMonitor
   resources:
     requests:
       cpu: 50m
@@ -62,3 +72,10 @@ features:
     eventTypes:
       - PolicyApplied
       - PolicySkipped
+
+# The chart ships the official Kyverno dashboard as a ConfigMap; the Grafana
+# sidecar picks it up from any namespace via the grafana_dashboard label.
+grafana:
+  enabled: true
+  annotations:
+    grafana_folder: "Platform"

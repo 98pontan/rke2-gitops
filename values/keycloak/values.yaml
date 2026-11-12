@@ -22,6 +22,9 @@ database:
   existingSecret: keycloak-db-secret   # uses key "password" by default — matches yours
 
 extraEnv: |
+  # Adds keycloak_user_events_total (logins, failed logins, registrations...) to /metrics
+  - name: KC_EVENT_METRICS_USER_ENABLED
+    value: "true"
   - name: KC_BOOTSTRAP_ADMIN_USERNAME
     value: admin
   - name: KC_BOOTSTRAP_ADMIN_PASSWORD
@@ -46,3 +49,10 @@ ingress:
     - hosts:
         - keycloak.pontus-homelab.space        # <-- replace with your actual domain
       secretName: keycloak-tls
+
+# metrics.enabled is true by default in the chart; this adds the ServiceMonitor
+# that scrapes /auth/metrics on the management port (9000).
+serviceMonitor:
+  enabled: true
+  labels:
+    release: prometheus-stack

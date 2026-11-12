@@ -1,0 +1,232 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-health-alerts
+  namespace: monitoring
+  labels:
+    grafana_alert: "1"
+data:
+  node-health-alerts.yaml: |
+    apiVersion: 1
+    groups:
+    - orgId: 1
+      name: node-health
+      folder: Nodes
+      interval: 1m
+      rules:
+      - uid: node-down
+        title: Node down
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            editorMode: code
+            expr: kube_node_status_condition{condition="Ready", status="true"}
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          queryType: expression
+          datasourceUid: __expr__
+          model:
+            type: threshold
+            expression: A
+            refId: C
+            datasource:
+              type: __expr__
+              uid: __expr__
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: Node {{ $labels.node }} is not Ready
+          description: Kubernetes has reported node {{ $labels.node }} as NotReady or Unknown for more than 2 minutes. Check power, network and the rke2-server/rke2-agent service on the node.
+        labels:
+          severity: critical
+        isPaused: false
+        notification_settings:
+          receiver: Pontus Jirbratt
+      - uid: node-disk-80
+        title: Node disk usage above 80%
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            editorMode: code
+            expr: 100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs|fuse.*", mountpoint!~"/run.*|/var/lib/kubelet/.*"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|nsfs|fuse.*",
+              mountpoint!~"/run.*|/var/lib/kubelet/.*"})
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          queryType: expression
+          datasourceUid: __expr__
+          model:
+            type: threshold
+            expression: A
+            refId: C
+            datasource:
+              type: __expr__
+              uid: __expr__
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 80
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: Disk {{ $labels.mountpoint }} on {{ $labels.instance }} is {{ printf "%.1f" $values.A.Value }}% full
+          description: Filesystem {{ $labels.device }} mounted at {{ $labels.mountpoint }} on {{ $labels.instance }} is above 80% used.
+        labels:
+          severity: warning
+        isPaused: false
+        notification_settings:
+          receiver: Pontus Jirbratt
+      - uid: pvc-usage-80
+        title: Persistent volume usage above 80%
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            editorMode: code
+            expr: 100 * kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          queryType: expression
+          datasourceUid: __expr__
+          model:
+            type: threshold
+            expression: A
+            refId: C
+            datasource:
+              type: __expr__
+              uid: __expr__
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 80
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is {{ printf "%.1f" $values.A.Value }}% full
+          description: Expand the volume or clean up data in PVC {{ $labels.persistentvolumeclaim }} in namespace {{ $labels.namespace }}.
+        labels:
+          severity: warning
+        isPaused: false
+        notification_settings:
+          receiver: Pontus Jirbratt
+      - uid: node-memory-80
+        title: Node memory usage above 80%
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            editorMode: code
+            expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          queryType: expression
+          datasourceUid: __expr__
+          model:
+            type: threshold
+            expression: A
+            refId: C
+            datasource:
+              type: __expr__
+              uid: __expr__
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 80
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: Memory on {{ $labels.instance }} is {{ printf "%.1f" $values.A.Value }}% used
+          description: Memory usage on {{ $labels.instance }} has been above 80% for 10 minutes.
+        labels:
+          severity: warning
+        isPaused: false
+        notification_settings:
+          receiver: Pontus Jirbratt
+      - uid: node-cpu-95
+        title: Node CPU usage above 95%
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            editorMode: code
+            expr: 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])))
+            instant: true
+            range: false
+            intervalMs: 1000
+            maxDataPoints: 43200
+            refId: A
+        - refId: C
+          queryType: expression
+          datasourceUid: __expr__
+          model:
+            type: threshold
+            expression: A
+            refId: C
+            datasource:
+              type: __expr__
+              uid: __expr__
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 95
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: CPU on {{ $labels.instance }} is {{ printf "%.1f" $values.A.Value }}% used
+          description: CPU usage on {{ $labels.instance }} has been above 95% for 10 minutes.
+        labels:
+          severity: warning
+        isPaused: false
+        notification_settings:
+          receiver: Pontus Jirbratt

@@ -1,4 +1,11 @@
 gitea:
+  # Exposes /metrics on the http port and creates a ServiceMonitor
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: prometheus-stack
   config:
     server:
       DOMAIN: "forgejo.pontus-homelab.space"
