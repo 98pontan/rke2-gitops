@@ -1,0 +1,10 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "enabledManagers": ["argocd", "kubernetes"],
+  "argocd": {
+    "managerFilePatterns": ["/^platform-apps/.*\\.ya?ml$/"]
+  },
+  "kubernetes": {
+    "managerFilePatterns": ["/^devops-apps/forgejo-runner/.*\\.ya?ml$/"]
+  }
+}
