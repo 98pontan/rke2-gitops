@@ -11,7 +11,7 @@ spec:
     # Tailscale Kubernetes operator: exposes cluster Services to the tailnet (private, no open ports)
     - repoURL: https://pkgs.tailscale.com/helmcharts
       chart: tailscale-operator
-      targetRevision: 1.104.4
+      targetRevision: 1.104.7
       helm:
         valueFiles:
           - $values/values/tailscale-operator/values.yaml
