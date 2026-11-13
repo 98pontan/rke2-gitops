@@ -15,7 +15,7 @@ strategy:
   type: Recreate
 
 image:
-  repository: forgejo.pontus-homelab.space/python-apps/morning-times
+  repository: forgejo.pontus-homelab.space/apps/morning-times
   tag: "latest"
   digest: ""
   # -- Always, since the tag is "latest"
@@ -78,7 +78,12 @@ envFrom: []
 initContainers:
   - name: wait-for-postgres
     image: "{{ .Values.postgres.image }}"
-    command: ["sh", "-c", "until pg_isready -h morning-times-postgres -p 5432 -q; do echo waiting for postgres; sleep 2; done"]
+    command:
+      [
+        "sh",
+        "-c",
+        "until pg_isready -h morning-times-postgres -p 5432 -q; do echo waiting for postgres; sleep 2; done",
+      ]
     securityContext:
       runAsUser: 70
       allowPrivilegeEscalation: false
@@ -215,13 +220,13 @@ vpa:
   # Initial: only applies at pod creation (e.g. on deploys). "Off": recommendations only.
   updateMode: Recreate
   app:
-    updateMode: ""   # empty = vpa.updateMode
-    minAllowed: {cpu: 10m, memory: 128Mi}
-    maxAllowed: {cpu: 500m, memory: 640Mi}   # app memory limit is 768Mi
+    updateMode: "" # empty = vpa.updateMode
+    minAllowed: { cpu: 10m, memory: 128Mi }
+    maxAllowed: { cpu: 500m, memory: 640Mi } # app memory limit is 768Mi
   postgres:
     updateMode: ""
-    minAllowed: {cpu: 10m, memory: 64Mi}
-    maxAllowed: {cpu: 500m, memory: 448Mi}   # postgres memory limit is 512Mi
+    minAllowed: { cpu: 10m, memory: 64Mi }
+    maxAllowed: { cpu: 500m, memory: 448Mi } # postgres memory limit is 512Mi
 
 podDisruptionBudget:
   enabled: false

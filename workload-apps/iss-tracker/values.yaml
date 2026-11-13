@@ -10,7 +10,7 @@ replicaCount: 1
 revisionHistoryLimit: 3
 
 image:
-  repository: forgejo.pontus-homelab.space/python-apps/iss-tracker
+  repository: forgejo.pontus-homelab.space/apps/iss-tracker
   # -- Defaults to Chart.appVersion when empty
   tag: "latest"
   # -- Pin by digest (sha256:...). Takes precedence over tag when set
@@ -118,7 +118,6 @@ envRaw: []
 
 # -- envFrom sources (configMapRef / secretRef)
 envFrom: []
-
 
 startupProbe: {}
 

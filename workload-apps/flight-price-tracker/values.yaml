@@ -8,7 +8,7 @@ replicaCount: 1
 revisionHistoryLimit: 3
 
 image:
-  repository: forgejo.pontus-homelab.space/python-apps/flight-price-tracker
+  repository: forgejo.pontus-homelab.space/apps/flight-price-tracker
   # -- Defaults to Chart.appVersion when empty
   tag: "latest"
   # -- Pin by digest (sha256:...). Takes precedence over tag when set
@@ -170,7 +170,7 @@ topologySpreadConstraints: []
 service:
   enabled: true
   type: ClusterIP
-  port:  587
+  port: 587
   # -- Container port name or number
   targetPort: http
   nodePort: null

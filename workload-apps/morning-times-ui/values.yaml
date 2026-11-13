@@ -16,7 +16,7 @@ strategy:
     maxSurge: 1
 
 image:
-  repository: forgejo.pontus-homelab.space/python-apps/morning-times-ui
+  repository: forgejo.pontus-homelab.space/apps/morning-times-ui
   tag: "latest"
   digest: ""
   # -- Always, since the tag is "latest"
@@ -175,5 +175,5 @@ podDisruptionBudget:
 vpa:
   enabled: true
   updateMode: Recreate
-  minAllowed: {cpu: 5m, memory: 16Mi}
-  maxAllowed: {cpu: 200m, memory: 96Mi}   # memory limit is 128Mi
+  minAllowed: { cpu: 5m, memory: 16Mi }
+  maxAllowed: { cpu: 200m, memory: 96Mi } # memory limit is 128Mi
