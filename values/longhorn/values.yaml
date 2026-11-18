@@ -1,6 +1,7 @@
 # You can inline your values here or point to a file in a git repo
 persistence:
   defaultClass: true
+  defaultClassReplicaCount: 2
 
 preUpgradeChecker:
     jobEnabled: false
