@@ -1,5 +1,14 @@
 hostname: rancher.pontus-homelab.space
 replicas: 1
+rancherImage: harbor.pontus-homelab.space/dockerhub/rancher/rancher
+
+# Hook jobs; tag is left to the chart default so it follows chart upgrades
+preUpgrade:
+  image:
+    repository: harbor.pontus-homelab.space/dockerhub/rancher/shell
+postDelete:
+  image:
+    repository: harbor.pontus-homelab.space/dockerhub/rancher/shell
 
 ingress:
   ingressClassName: nginx
