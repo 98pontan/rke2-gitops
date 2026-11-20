@@ -17,10 +17,10 @@ strategy:
 
 image:
   repository: forgejo.pontus-homelab.space/apps/morning-times-ui
-  tag: "latest"
+  # -- A release from CHANGELOG.md (git tag v0.1.0 -> image 0.1.0). Bump this to deploy a new version.
+  tag: "0.1.0"
   digest: ""
-  # -- Always, since the tag is "latest"
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 # forgejo-registry is copied into every namespace by the Kyverno policy sync-forgejo-registry-secret
 imagePullSecrets:

@@ -16,10 +16,10 @@ strategy:
 
 image:
   repository: forgejo.pontus-homelab.space/apps/morning-times
-  tag: "latest"
+  # -- A release from CHANGELOG.md (git tag v0.1.0 -> image 0.1.0). Bump this to deploy a new version.
+  tag: "0.1.0"
   digest: ""
-  # -- Always, since the tag is "latest"
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 # forgejo-registry is copied into every namespace by the Kyverno policy sync-forgejo-registry-secret
 imagePullSecrets:
@@ -58,6 +58,8 @@ env:
   HOME: /tmp
   XDG_CACHE_HOME: /tmp/cache
   APP_AI__PROVIDER: gemini
+  # Keycloak login (realm and client in the image's config.yaml); only group "newspaper" can change things
+  APP_AUTH__ENABLED: "true"
   APP_SCHEDULER__BRIEF_TIME: "06:30"
 
 # -- Ordered on purpose: POSTGRES_PASSWORD must be defined before DATABASE_URL uses $(POSTGRES_PASSWORD).
@@ -221,12 +223,20 @@ vpa:
   updateMode: Recreate
   app:
     updateMode: "" # empty = vpa.updateMode
-    minAllowed: { cpu: 10m, memory: 128Mi }
-    maxAllowed: { cpu: 500m, memory: 640Mi } # app memory limit is 768Mi
+    minAllowed:
+      cpu: 10m
+      memory: 128Mi
+    maxAllowed:
+      cpu: 500m
+      memory: 640Mi # app memory limit is 768Mi
   postgres:
     updateMode: ""
-    minAllowed: { cpu: 10m, memory: 64Mi }
-    maxAllowed: { cpu: 500m, memory: 448Mi } # postgres memory limit is 512Mi
+    minAllowed:
+      cpu: 10m
+      memory: 64Mi
+    maxAllowed:
+      cpu: 500m
+      memory: 448Mi # postgres memory limit is 512Mi
 
 podDisruptionBudget:
   enabled: false
@@ -237,6 +247,7 @@ podDisruptionBudget:
 # External Secrets Operator: reads Vault secret/data/morning-times/config and creates the
 # Secret morning-times-config. All its keys become env vars in the app pod:
 #   GEMINI_API_KEY      Google AI Studio key
+#   OPENROUTER_API_KEY  optional: free OpenRouter key (openrouter.ai), AI fallback when Gemini fails
 #   EMAIL_PASSWORD      Gmail app password
 #   POSTGRES_PASSWORD   database password (also used by the Postgres StatefulSet)
 # Create it with:
