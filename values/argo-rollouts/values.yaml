@@ -1,0 +1,16 @@
+dashboard:
+  enabled: true
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - argo-rollouts.pontus-homelab.space
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      # Unlike ArgoCD server, the Rollouts dashboard is plain HTTP internally
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    tls:
+      - secretName: argo-rollouts-dashboard-tls
+        hosts:
+          - argo-rollouts.pontus-homelab.space

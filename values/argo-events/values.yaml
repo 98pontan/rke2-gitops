@@ -1,0 +1,10 @@
+# Argo Events controller only; the EventBus, EventSource and Sensor for the release
+# pipeline live in argo-workflows-resources/ (namespace argo).
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

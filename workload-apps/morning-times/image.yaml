@@ -1,0 +1,7 @@
+# Prod image. Written by the release-to-main Argo workflow when it promotes a tested dev
+# image (sha-<commit>); see argo-workflows-resources/workflowtemplate-release.yaml.
+# Roll back by reverting the commit that changed this file.
+# Until the first promotion prod keeps following "latest".
+image:
+  tag: "latest"
+  pullPolicy: Always

@@ -9,17 +9,32 @@ fullnameOverride: "morning-times-ui"
 replicaCount: 1
 revisionHistoryLimit: 3
 
+# -- Deployment strategy; ignored when rollout.enabled
 strategy:
   type: RollingUpdate
   rollingUpdate:
     maxUnavailable: 0
     maxSurge: 1
 
+# -- Argo Rollouts blue-green instead of a plain Deployment (needs the argo-rollouts controller and
+# argoproj.io/Rollout in the "apps" AppProject's namespaceResourceWhitelist). A new pod template starts
+# behind the "-preview" Service; the main Service switches to it on promotion, and the old pods stay
+# for scaleDownDelaySeconds so a rollback (kubectl argo rollouts undo) is instant.
+rollout:
+  enabled: true
+  # -- false: wait for "Promote" in the Rollouts dashboard (https://argo-rollouts.pontus-homelab.space)
+  autoPromotionEnabled: false
+  scaleDownDelaySeconds: 60
+  # -- Reach the new version before promoting it
+  previewIngress:
+    enabled: true
+    host: morning-times-preview.pontus-homelab.space
+
 image:
   repository: forgejo.pontus-homelab.space/apps/morning-times-ui
   tag: "latest"
   digest: ""
-  # -- Always, since the tag is "latest"
+  # -- Overridden by image.yaml (prod image tag, set by the release-to-main workflow)
   pullPolicy: Always
 
 # forgejo-registry is copied into every namespace by the Kyverno policy sync-forgejo-registry-secret

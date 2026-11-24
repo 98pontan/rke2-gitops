@@ -1,0 +1,234 @@
+# Test a branch or tag of morning-times / morning-times-ui, merge it into main on GitHub and
+# promote the image dev already ran (sha-<commit>, built by Forgejo CI on the branch push) to prod
+# by writing its tag to rke2-gitops workload-apps/<repo>/image.yaml. Prod is never rebuilt.
+# Start it from the Argo Workflows UI (Workflow Templates -> release-to-main -> Submit),
+# or push a tag rc-* (see sensor-release.yaml).
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: release-to-main
+  namespace: argo
+spec:
+  serviceAccountName: argo-workflow
+  entrypoint: release
+  arguments:
+    parameters:
+      - name: repo
+        enum:
+          - morning-times
+          - morning-times-ui
+        value: morning-times
+      - name: ref
+        description: Branch or tag to test and merge, e.g. feature/v0.2.0 or rc-0.2.0
+        value: ""
+
+  # Workspace shared by the steps; deleted when the workflow finishes
+  volumeClaimTemplates:
+    - metadata:
+        name: work
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+  volumeClaimGC:
+    strategy: OnWorkflowCompletion
+
+  templates:
+    - name: release
+      steps:
+        - - name: checkout
+            template: checkout
+        - - name: check-image
+            template: check-image
+        - - name: test-backend
+            template: test-backend
+            when: "'{{workflow.parameters.repo}}' == 'morning-times'"
+          - name: test-ui
+            template: test-ui
+            when: "'{{workflow.parameters.repo}}' == 'morning-times-ui'"
+        - - name: merge
+            template: merge
+        - - name: promote
+            template: promote
+
+    # Clone the ref and record the exact commit that gets tested and merged
+    - name: checkout
+      container:
+        image: docker.io/alpine/git:v2.54.1
+        command: [sh, -euc]
+        args:
+          - |
+            REF="${REF#refs/tags/}"
+            REF="${REF#refs/heads/}"
+            if [ -z "$REF" ] || [ "$REF" = main ]; then
+              echo "ref must be a feature/release branch or rc tag, got '$REF'"; exit 1
+            fi
+            git config --global credential.helper '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
+            git clone --branch "$REF" "https://github.com/98pontan/$REPO.git" /work/src
+            git -C /work/src rev-parse HEAD > /work/sha
+            # Same tag Forgejo CI gives the image (docker/metadata-action type=sha, 7 chars)
+            echo "sha-$(cut -c1-7 /work/sha)" > /work/image-tag
+            echo "$REF" > /work/ref
+            echo "Testing $REPO $REF at $(cat /work/sha)"
+        env:
+          - name: REPO
+            value: "{{workflow.parameters.repo}}"
+          - name: REF
+            value: "{{workflow.parameters.ref}}"
+          - name: GITHUB_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-release
+                key: token
+        volumeMounts: &work
+          - name: work
+            mountPath: /work
+        resources: &small
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+
+    # The image to promote is the one Forgejo CI built from this exact commit. The rc tag and its
+    # commit can reach Forgejo in the same mirror sync, so wait for that build for up to 20 minutes.
+    - name: check-image
+      container:
+        image: quay.io/skopeo/stable:v1.18.0
+        command: [sh, -euc]
+        args:
+          - |
+            IMAGE="docker://forgejo.pontus-homelab.space/apps/$REPO:$(cat /work/image-tag)"
+            for i in $(seq 1 40); do
+              if skopeo inspect --raw --authfile /auth/config.json "$IMAGE" >/dev/null; then
+                echo "Found $IMAGE"; exit 0
+              fi
+              echo "Waiting for Forgejo CI to push $IMAGE ($i/40)"; sleep 30
+            done
+            echo "$IMAGE not found. Was this commit pushed to a branch (so CI built it)?"; exit 1
+        env:
+          - name: REPO
+            value: "{{workflow.parameters.repo}}"
+        volumeMounts:
+          - name: work
+            mountPath: /work
+          - name: registry-auth
+            mountPath: /auth
+            readOnly: true
+        resources: *small
+      volumes:
+        # Copied into every namespace by the Kyverno policy sync-forgejo-registry-secret
+        - name: registry-auth
+          secret:
+            secretName: forgejo-registry
+            items:
+              - key: .dockerconfigjson
+                path: config.json
+
+    - name: test-backend
+      container:
+        image: docker.io/library/python:3.13-slim
+        command: [sh, -euc]
+        args:
+          - |
+            cd /work/src
+            pip install --no-cache-dir --quiet -r requirements-dev.txt
+            python -m pytest -q
+        volumeMounts: *work
+        resources: &test
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
+
+    - name: test-ui
+      container:
+        image: docker.io/library/node:24-alpine
+        command: [sh, -euc]
+        args:
+          - |
+            cd /work/src
+            npm ci --no-audit --no-fund
+            npm test
+            npm run build
+        volumeMounts: *work
+        resources: *test
+
+    # Merge the tested commit (not whatever the branch points to now) into main
+    - name: merge
+      container:
+        image: docker.io/alpine/git:v2.54.1
+        command: [sh, -euc]
+        args:
+          - |
+            cd /work/src
+            SHA="$(cat /work/sha)"
+            REF="$(cat /work/ref)"
+            git config --global credential.helper '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
+            git config user.name "Argo Workflows"
+            git config user.email "argo-workflows@pontus-homelab.space"
+            git fetch origin main
+            git checkout -B main origin/main
+            git merge --no-ff -m "Merge $REF into main (tested by $WORKFLOW)" "$SHA"
+            git push origin main
+            echo "Merged $REF ($SHA) into main"
+        env:
+          - name: GITHUB_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-release
+                key: token
+          - name: WORKFLOW
+            value: "{{workflow.name}}"
+        volumeMounts: *work
+        resources: *small
+
+    # Point prod at the tested image. ArgoCD syncs it and prod's blue-green Rollout waits for a
+    # manual promote (preview at morning-times-preview for the UI). Needs GITHUB_TOKEN write access
+    # to 98pontan/rke2-gitops as well.
+    - name: promote
+      container:
+        image: docker.io/alpine/git:v2.54.1
+        command: [sh, -euc]
+        args:
+          - |
+            SHA="$(cat /work/sha)"
+            REF="$(cat /work/ref)"
+            TAG="$(cat /work/image-tag)"
+            git config --global credential.helper '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
+            git clone --depth 1 https://github.com/98pontan/rke2-gitops.git /work/gitops
+            cd /work/gitops
+            git config user.name "Argo Workflows"
+            git config user.email "argo-workflows@pontus-homelab.space"
+            FILE="workload-apps/$REPO/image.yaml"
+            printf '%s\n' \
+              "# Prod image. Written by the release-to-main Argo workflow; do not edit by hand." \
+              "# Roll back by reverting the commit that changed this file." \
+              "# $REF @ $SHA ($WORKFLOW)" \
+              "image:" \
+              "  tag: \"$TAG\"" \
+              "  pullPolicy: IfNotPresent" > "$FILE"
+            git add "$FILE"
+            git diff --cached --quiet && { echo "prod already runs $TAG"; exit 0; }
+            git commit -m "Promote $REPO $REF ($TAG) to prod"
+            # Forgejo CI may push dev image tags at the same time
+            for attempt in 1 2 3 4 5; do
+              git push origin HEAD:main && { echo "Promoted $REPO $TAG to prod"; exit 0; }
+              sleep $((attempt * 3))
+              git pull --rebase origin main
+            done
+            echo "Could not push to rke2-gitops"; exit 1
+        env:
+          - name: REPO
+            value: "{{workflow.parameters.repo}}"
+          - name: WORKFLOW
+            value: "{{workflow.name}}"
+          - name: GITHUB_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-release
+                key: token
+        volumeMounts: *work
+        resources: *small

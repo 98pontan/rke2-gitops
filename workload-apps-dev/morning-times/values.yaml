@@ -1,0 +1,18 @@
+# Dev overrides for morning-times in namespace morning-times-dev (platform-apps/app-of-workloads-dev.yaml).
+# Resource names stay the same as prod; the namespace keeps them apart.
+
+image:
+  # Tags are immutable per commit (see image.yaml), so no need to re-pull
+  pullPolicy: Always
+
+env:
+  # Never send real emails or run the background jobs from dev
+  APP_SCHEDULER__ENABLED: "false"
+  APP_EMAIL__ENABLED: "false"
+  LOG_LEVEL: debug
+  # Keycloak login (realm and client in the image's config.yaml); only group "newspaper" can change things
+  APP_AUTH__ENABLED: "true"
+
+# Own database; ESO reads Vault secret/morning-times-dev/config (copy of the prod secret)
+postgres:
+  storage: 1Gi

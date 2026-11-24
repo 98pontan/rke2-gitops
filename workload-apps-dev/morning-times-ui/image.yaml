@@ -1,0 +1,3 @@
+# Written by Forgejo CI on every push to a non-main branch. Do not edit by hand.
+image:
+  tag: "feature-v0.1.0"

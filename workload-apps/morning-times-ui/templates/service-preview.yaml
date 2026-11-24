@@ -1,0 +1,55 @@
+{{- /*
+Blue-green preview: the Rollout points this Service at the new version before promotion.
+Same ports as the active Service; the Rollout controller adds the pod-template-hash selector.
+*/ -}}
+{{- if and .Values.rollout.enabled .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.fullname" . }}-preview
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+  selector:
+    {{- include "app.selectorLabels" . | nindent 4 }}
+{{- end }}
+{{- with .Values.rollout.previewIngress }}
+{{- if and $.Values.rollout.enabled .enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" $ }}-preview
+  labels:
+    {{- include "app.labels" $ | nindent 4 }}
+  {{- with $.Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $.Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  tls:
+    - secretName: {{ include "app.fullname" $ }}-preview-tls
+      hosts:
+        - {{ .host | quote }}
+  rules:
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "app.fullname" $ }}-preview
+                port:
+                  number: {{ $.Values.service.port }}
+{{- end }}
+{{- end }}

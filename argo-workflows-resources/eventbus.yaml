@@ -1,0 +1,17 @@
+# Message bus between the EventSource and the Sensor. JetStream always runs 3 small
+# NATS pods; without spec.jetstream.persistence they use emptyDir (no Longhorn volumes).
+apiVersion: argoproj.io/v1alpha1
+kind: EventBus
+metadata:
+  name: default
+  namespace: argo
+spec:
+  jetstream:
+    version: latest
+    containerTemplate:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 256Mi

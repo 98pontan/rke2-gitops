@@ -1,0 +1,48 @@
+# Dev copies of the workload apps. Every folder workload-apps-dev/<app> becomes the Application
+# <app>-dev in namespace <app>-dev, rendering the chart from workload-apps/<app> with these values on top:
+#   workload-apps/<app>/values.yaml        prod defaults
+#   workload-apps-dev/<app>/values.yaml    dev overrides (hostnames, scheduler off, ...)
+#   workload-apps-dev/<app>/image.yaml     image tag, written by Forgejo CI on every push to a non-main branch
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: workload-apps-dev
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/98pontan/rke2-gitops.git
+        revision: HEAD
+        directories:
+          - path: workload-apps-dev/*
+  template:
+    metadata:
+      name: '{{.path.basename}}-dev'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: apps
+      sources:
+        - repoURL: https://github.com/98pontan/rke2-gitops.git
+          targetRevision: HEAD
+          path: 'workload-apps/{{.path.basename}}'
+          helm:
+            releaseName: '{{.path.basename}}'
+            valueFiles:
+              - values.yaml
+              - '$values/{{.path.path}}/values.yaml'
+              - '$values/{{.path.path}}/image.yaml'
+        - repoURL: https://github.com/98pontan/rke2-gitops.git
+          targetRevision: HEAD
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.path.basename}}-dev'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

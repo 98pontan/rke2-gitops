@@ -23,6 +23,13 @@ spec:
         repoURL: https://github.com/98pontan/rke2-gitops.git
         targetRevision: HEAD
         path: '{{.path.path}}'
+        helm:
+          # image.yaml holds the prod image tag, written by the release-to-main workflow
+          # (argo-workflows-resources/workflowtemplate-release.yaml). Apps without one use values.yaml as is.
+          valueFiles:
+            - values.yaml
+            - image.yaml
+          ignoreMissingValueFiles: true
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{.path.basename}}'

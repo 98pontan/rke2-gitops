@@ -18,7 +18,7 @@ image:
   repository: forgejo.pontus-homelab.space/apps/morning-times
   tag: "latest"
   digest: ""
-  # -- Always, since the tag is "latest"
+  # -- Overridden by image.yaml (prod image tag, set by the release-to-main workflow)
   pullPolicy: Always
 
 # forgejo-registry is copied into every namespace by the Kyverno policy sync-forgejo-registry-secret
