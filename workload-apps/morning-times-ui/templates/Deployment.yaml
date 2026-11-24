@@ -1,5 +1,14 @@
+{{- /*
+Deployment, or an Argo Rollout with the same pod template when rollout.enabled (blue-green:
+the new version starts behind the preview Service and the active Service switches over on promotion).
+*/ -}}
+{{- if .Values.rollout.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- else }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: {{ include "app.fullname" . }}
   labels:
@@ -13,9 +22,18 @@ spec:
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  {{- if .Values.rollout.enabled }}
+  strategy:
+    blueGreen:
+      activeService: {{ include "app.fullname" . }}
+      previewService: {{ include "app.fullname" . }}-preview
+      autoPromotionEnabled: {{ .Values.rollout.autoPromotionEnabled }}
+      scaleDownDelaySeconds: {{ .Values.rollout.scaleDownDelaySeconds }}
+  {{- else }}
   {{- with .Values.strategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- end }}
   selector:
     matchLabels:

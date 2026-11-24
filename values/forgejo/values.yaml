@@ -19,6 +19,10 @@ gitea:
       ENABLED: "true"
     actions:
       ENABLED: "true"
+    webhook:
+      # Default "external" blocks in-cluster targets; allow only the Argo Events webhook
+      # (argo-workflows-resources/eventsource-forgejo.yaml)
+      ALLOWED_HOST_LIST: "external,forgejo-eventsource-svc.argo.svc.cluster.local"
     service:
       DISABLE_REGISTRATION: false
       REQUIRE_SIGNIN_VIEW: true

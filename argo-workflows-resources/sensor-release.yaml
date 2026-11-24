@@ -1,0 +1,89 @@
+# Starts release-to-main when a tag rc-* is pushed to morning-times or morning-times-ui.
+# GitHub is the source of truth: the tag reaches Forgejo on its next mirror sync, and
+# Forgejo sends the push webhook then.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: release-sensor
+  namespace: argo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: release-sensor
+  namespace: argo
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows"]
+    verbs: ["create"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtemplates"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: release-sensor
+  namespace: argo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: release-sensor
+subjects:
+  - kind: ServiceAccount
+    name: release-sensor
+    namespace: argo
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: release-on-rc-tag
+  namespace: argo
+spec:
+  template:
+    serviceAccountName: release-sensor
+  dependencies:
+    - name: rc-tag
+      eventSourceName: forgejo
+      eventName: forgejo
+      filters:
+        data:
+          - path: body.ref
+            type: string
+            value:
+              - "refs/tags/rc-.*"
+          - path: body.repository.name
+            type: string
+            value:
+              - morning-times
+              - morning-times-ui
+  triggers:
+    - template:
+        name: release-to-main
+        argoWorkflow:
+          operation: submit
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: release-to-main-
+                namespace: argo
+              spec:
+                workflowTemplateRef:
+                  name: release-to-main
+                arguments:
+                  parameters:
+                    - name: repo
+                      value: set-by-sensor
+                    - name: ref
+                      value: set-by-sensor
+          parameters:
+            - src:
+                dependencyName: rc-tag
+                dataKey: body.repository.name
+              dest: spec.arguments.parameters.0.value
+            - src:
+                dependencyName: rc-tag
+                dataKey: body.ref
+              dest: spec.arguments.parameters.1.value

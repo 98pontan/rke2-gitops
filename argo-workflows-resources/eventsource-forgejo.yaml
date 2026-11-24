@@ -1,0 +1,25 @@
+# Receives Forgejo webhooks. Forgejo delivers to the in-cluster Service, so nothing is
+# exposed outside the cluster. Configure the webhook on apps/morning-times and
+# apps/morning-times-ui in Forgejo:
+#   URL:                  http://forgejo-eventsource-svc.argo.svc.cluster.local:12000/forgejo
+#   Content type:         application/json
+#   Authorization header: Bearer <WEBHOOK_TOKEN from Vault secret/argo/release>
+#   Trigger on:           Push events
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: forgejo
+  namespace: argo
+spec:
+  service:
+    ports:
+      - port: 12000
+        targetPort: 12000
+  webhook:
+    forgejo:
+      port: "12000"
+      endpoint: /forgejo
+      method: POST
+      authSecret:
+        name: forgejo-webhook
+        key: token

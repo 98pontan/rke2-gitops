@@ -5,58 +5,36 @@ metadata:
   namespace: argocd
 spec:
   project: infra
-  source:
-    repoURL: https://argoproj.github.io/argo-helm
-    chart: argo-workflows
-    targetRevision: 4.0.4
-    helm:
-      releaseName: argo-workflows
-      values: |
-        server:
-          enabled: true
-          replicas: 1
-          serviceType: ClusterIP
-          servicePort: 2746
-          extraArgs:
-            - --auth-mode=server
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
-
-        controller:
-          replicas: 1
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
-          workflowDefaults:
-            spec:
-              ttlStrategy:
-                secondsAfterFinished: 300
-
-        workflow:
-          rbac:
-            create: true
-          serviceAccount:
-            create: true
-
-        persistence:
-          enabled: false
-
+  sources:
+    - repoURL: https://argoproj.github.io/argo-helm
+      chart: argo-workflows
+      targetRevision: 2.0.18 # Argo Workflows v4.1.6
+      helm:
+        releaseName: argo-workflows
+        valueFiles:
+          - $values/values/argo-workflows/values.yaml
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      ref: values
+    # Release pipeline: Vault-backed secrets, the Forgejo webhook (Argo Events)
+    # and the release-to-main WorkflowTemplate
+    - repoURL: https://github.com/98pontan/rke2-gitops.git
+      targetRevision: main
+      path: argo-workflows-resources
   destination:
     server: https://kubernetes.default.svc
     namespace: argo
-
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # EventBus/EventSource/Sensor CRDs come from the argo-events app
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

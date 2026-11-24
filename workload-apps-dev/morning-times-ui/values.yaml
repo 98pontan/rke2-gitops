@@ -1,0 +1,25 @@
+# Dev overrides for morning-times-ui in namespace morning-times-ui-dev (platform-apps/app-of-workloads-dev.yaml).
+
+image:
+  # Tags are immutable per commit (see image.yaml), so no need to re-pull
+  pullPolicy: IfNotPresent
+
+env:
+  BACKEND_URL: "http://morning-times.morning-times-dev.svc.cluster.local:80"
+
+ingress:
+  hosts:
+    - host: morning-times-dev.pontus-homelab.space
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: morning-times-ui-dev-tls
+      hosts:
+        - morning-times-dev.pontus-homelab.space
+
+# Same blue-green Rollout as prod, but no manual gate and no preview hostname
+rollout:
+  autoPromotionEnabled: true
+  previewIngress:
+    enabled: false

@@ -1,0 +1,67 @@
+controller:
+  replicas: 1
+  # Only run workflows in the argo namespace
+  workflowNamespaces:
+    - argo
+  workflowDefaults:
+    spec:
+      # Keep finished workflows (and their logs) for a day
+      ttlStrategy:
+        secondsAfterCompletion: 86400
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 1Gi
+
+# Service account the workflow pods run as (created in workflowNamespaces)
+workflow:
+  serviceAccount:
+    create: true
+    name: argo-workflow
+  rbac:
+    create: true
+
+server:
+  replicas: 1
+  # Log in with Keycloak. "server" mode would give everyone who reaches the UI full access,
+  # and the UI can merge to main.
+  authModes:
+    - sso
+  sso:
+    enabled: true
+    issuer: https://keycloak.pontus-homelab.space/auth/realms/homelab
+    # Secret argo-server-sso is built by ESO (argo-workflows-resources/external-secrets.yaml)
+    clientId:
+      name: argo-server-sso
+      key: client-id
+    clientSecret:
+      name: argo-server-sso
+      key: client-secret
+    redirectUrl: https://argo-workflows.pontus-homelab.space/oauth2/callback
+    scopes:
+      - groups
+    # Every Keycloak user that can log in gets the server's permissions
+    rbac:
+      enabled: false
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-cloudflare"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - argo-workflows.pontus-homelab.space
+    paths:
+      - /
+    tls:
+      - secretName: argo-workflows-tls
+        hosts:
+          - argo-workflows.pontus-homelab.space
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 512Mi
