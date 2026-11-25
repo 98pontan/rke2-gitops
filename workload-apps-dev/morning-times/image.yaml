@@ -1,3 +1,4 @@
 # Written by Forgejo CI on every push to a non-main branch. Do not edit by hand.
+# feature/v0.1.0 @ dd3bbae8fc6fed5191722bc9230c4a2266916926
 image:
-  tag: "feature-v0.1.0"
+  tag: "sha-dd3bbae"
