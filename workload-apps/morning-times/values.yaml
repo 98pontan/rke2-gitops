@@ -59,6 +59,9 @@ env:
   XDG_CACHE_HOME: /tmp/cache
   APP_AI__PROVIDER: gemini
   APP_SCHEDULER__BRIEF_TIME: "06:30"
+  # Keycloak login (realm homelab, public client morning-times, group newspaper can edit).
+  # While on, default watches no longer send alerts; each user's own watches do.
+  APP_AUTH__ENABLED: "true"
 
 # -- Ordered on purpose: POSTGRES_PASSWORD must be defined before DATABASE_URL uses $(POSTGRES_PASSWORD).
 # Use a URL-safe password (e.g. `openssl rand -hex 24`), it is inserted into the URL as is.
