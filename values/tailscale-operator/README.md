@@ -1,8 +1,8 @@
 # Tailscale operator: tailnet setup
 
 The operator (`platform-apps/tailscale-operator.yaml`) runs a subnet router
-(`tailscale-operator/connector.yaml`) that makes the three cluster nodes reachable from the
-tailnet. The usual `https://*.pontus-homelab.space` names then work away from home too:
+(`tailscale-operator/connector.yaml`) that makes pontus-server-3 (`192.168.50.53`) reachable
+from the tailnet. The usual `https://*.pontus-homelab.space` names then work away from home too:
 Cloudflare DNS still answers `192.168.50.53`, the phone reaches it through the tailnet, and
 ingress-nginx serves the same Let's Encrypt certificate as on the home network.
 
@@ -21,17 +21,15 @@ Merge these into the existing policy:
   // under Machines -> homelab-subnet-router -> Edit route settings).
   "autoApprovers": {
     "routes": {
-      "192.168.50.53/32":  ["tag:k8s"],
-      "192.168.50.173/32": ["tag:k8s"],
-      "192.168.50.219/32": ["tag:k8s"]
+      "192.168.50.53/32": ["tag:k8s"]
     }
   },
 
   "grants": [
-    // Your devices may use HTTPS/HTTP (ingress) and the Kubernetes API on the nodes, nothing else.
+    // Your devices may use HTTPS/HTTP (ingress) and the Kubernetes API on the node, nothing else.
     {
       "src": ["autogroup:member"],
-      "dst": ["192.168.50.53/32", "192.168.50.173/32", "192.168.50.219/32"],
+      "dst": ["192.168.50.53/32"],
       "ip":  ["tcp:443", "tcp:80", "tcp:6443"]
     }
   ]
