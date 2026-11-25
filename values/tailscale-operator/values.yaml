@@ -1,4 +1,4 @@
-# Tailscale operator (chart tailscale-operator 1.104.4). Defaults are fine; only what differs is set here.
+# Tailscale operator (chart tailscale-operator 1.104.7). Defaults are fine; only what differs is set here.
 
 # OAuth credentials are NOT set here: with oauth.clientId empty, the chart reads the pre-created
 # Secret "operator-oauth" (keys client_id, client_secret), which ESO creates from Vault
